@@ -39,10 +39,10 @@ app.use(helmet({
 app.use(cors({
   origin: env.corsOrigins.includes("*")
     ? true
-    : env.corsOrigins.map((s) => s.trim()),
+    : env.corsOrigins,
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
 }));
 
 // Body size limits
