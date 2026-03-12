@@ -1,0 +1,28 @@
+{
+  "name": "vendorcenter",
+  "private": true,
+  "version": "0.1.0",
+  "description": "VendorCenter modular marketplace workspace",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "clean:frontend:js": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-ChildItem -Path frontend/src -Recurse -Filter *.js | Remove-Item -Force -ErrorAction SilentlyContinue\"",
+    "dev:backend": "npm run dev --workspace @vendorcenter/backend",
+    "dev:frontend": "npm run dev --workspace @vendorcenter/frontend",
+    "dev:company": "npm run dev:company --workspace @vendorcenter/frontend",
+    "build:backend": "npm run build --workspace @vendorcenter/backend",
+    "build:frontend": "npm run build --workspace @vendorcenter/frontend",
+    "build:company": "npm run build:company --workspace @vendorcenter/frontend",
+    "db:bootstrap": "npm run db:bootstrap --workspace @vendorcenter/backend",
+    "db:health": "npm run db:health --workspace @vendorcenter/backend",
+    "db:seed-admin": "npx --workspace @vendorcenter/backend tsx src/scripts/seed-admin.ts",
+    "build": "npm run clean:frontend:js && npm run build:backend && npm run build:frontend",
+    "dev": "echo \"Run npm run dev:backend, npm run dev:frontend, and npm run dev:company in separate terminals\"",
+    "lint": "echo \"Linting will be added with ESLint in next phase\""
+  },
+  "devDependencies": {
+    "vite": "^7.3.1"
+  }
+}

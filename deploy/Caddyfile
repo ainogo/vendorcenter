@@ -1,0 +1,16 @@
+vendorcenter.in {
+  encode gzip zstd
+
+  @api path /api/* /health /ai/*
+  handle @api {
+    reverse_proxy backend:4000
+  }
+
+  handle {
+    reverse_proxy frontend:3000
+  }
+}
+
+www.vendorcenter.in {
+  redir https://vendorcenter.in{uri} 308
+}
