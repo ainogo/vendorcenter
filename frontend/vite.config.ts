@@ -4,13 +4,16 @@ import path from "path";
 import fs from "fs";
 
 // Serve company.html for all /company/* routes (admin SPA)
-function companyHistoryFallback(): Plugin {
+// Serve vendor.html for all /vendor/* routes (vendor SPA)
+function spaHistoryFallback(): Plugin {
   return {
-    name: "company-history-fallback",
+    name: "spa-history-fallback",
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
         if (req.url && (req.url === "/company" || req.url.startsWith("/company/"))) {
           req.url = "/company.html";
+        } else if (req.url && (req.url === "/vendor" || req.url.startsWith("/vendor/"))) {
+          req.url = "/vendor.html";
         }
         next();
       });
@@ -19,7 +22,7 @@ function companyHistoryFallback(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), companyHistoryFallback()],
+  plugins: [react(), spaHistoryFallback()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -30,6 +33,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
         company: path.resolve(__dirname, "company.html"),
+        vendor: path.resolve(__dirname, "vendor.html"),
       },
     },
   },
