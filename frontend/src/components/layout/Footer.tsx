@@ -14,9 +14,11 @@ const companyLinks: { label: string; to: string }[] = [
   { label: "Explore", to: "/explore" },
 ];
 
+const vendorPortalUrl = import.meta.env.VITE_VENDOR_PORTAL_URL || "http://localhost:8080";
+
 const vendorLinks: { label: string; href?: string; to?: string }[] = [
   { label: "Register", to: "/register" },
-  { label: "Vendor Dashboard", href: "http://localhost:8080/dashboard" },
+  { label: "Vendor Dashboard", href: `${vendorPortalUrl}/dashboard` },
   { label: "Login", to: "/login" },
   { label: "Support", href: "mailto:support@vendorcenter.in" },
 ];

@@ -24,7 +24,8 @@ const Login = () => {
   const routeByRole = (role: string) => {
     if (role === "vendor") {
       toast.info("Redirecting to Vendor Portal…");
-      window.location.href = "http://localhost:8080/dashboard";
+      const vendorUrl = import.meta.env.VITE_VENDOR_PORTAL_URL || "http://localhost:8080";
+      window.location.href = `${vendorUrl}/dashboard`;
       return;
     }
     if (role === "admin") {
