@@ -18,7 +18,7 @@ const Header = () => {
   const routerLocation = useRouterLocation();
   const isServicesPage = routerLocation.pathname === "/services";
   const { user, logout } = useAuth();
-  const { cityName, loading: locationLoading } = useLocation();
+  const { cityName, location, loading: locationLoading } = useLocation();
 
   // Fetch profile pic for logged-in users
   const { data: headerProfile } = useQuery({
@@ -40,13 +40,36 @@ const Header = () => {
   // Fetch live categories from vendor data
   const [navCategories, setNavCategories] = useState<string[]>([]);
   useEffect(() => {
-    api.getCategories().then((res) => {
-      if (res.data && res.data.length > 0) {
-        // Don't show "Other" in the top nav — it's a catch-all for the services page
-        setNavCategories(res.data.filter((c) => c.cat !== "Other").map((c) => c.cat));
+    let alive = true;
+
+    const load = async () => {
+      // Prefer location-aware top categories (Amazon-like personalization).
+      if (location?.latitude && location?.longitude) {
+        try {
+          const topRes = await api.getTopCategoriesByLocation(location.latitude, location.longitude, 25, 6);
+          if (alive && topRes.data && topRes.data.length > 0) {
+            setNavCategories(topRes.data.map((row) => row.category));
+            return;
+          }
+        } catch {
+          // Fallback to global categories below.
+        }
       }
-    }).catch(() => {});
-  }, []);
+
+      try {
+        const res = await api.getCategories();
+        if (alive && res.data && res.data.length > 0) {
+          // Don't show "Other" in the top nav — it's a catch-all for the services page.
+          setNavCategories(res.data.filter((c) => c.cat !== "Other").map((c) => c.cat).slice(0, 6));
+        }
+      } catch {
+        if (alive) setNavCategories([]);
+      }
+    };
+
+    void load();
+    return () => { alive = false; };
+  }, [location?.latitude, location?.longitude]);
 
   const handleLogout = async () => {
     await logout();
@@ -189,6 +212,13 @@ const Header = () => {
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
             >
               All Services
+            </Link>
+            <Link
+              to="/services"
+              className="text-xs font-semibold uppercase tracking-wide text-primary/80 hover:text-primary transition-colors whitespace-nowrap"
+              title="Top categories near your selected location"
+            >
+              Top Categories
             </Link>
             {navCategories.map((cat) => (
               <Link

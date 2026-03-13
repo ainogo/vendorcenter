@@ -7,6 +7,7 @@ import {
   getZonesWithPolygons,
   updateZonePolygon,
   findZonesContainingPoint,
+  getTopCategoriesForLocation,
 } from "./location.service.js";
 
 export const locationRouter = Router();
@@ -47,6 +48,35 @@ locationRouter.get("/vendors-nearby", async (req, res) => {
 locationRouter.get("/zones", async (_req, res) => {
   const zones = await getZonesWithPolygons();
   res.json({ success: true, data: zones });
+});
+
+/**
+ * GET /api/location/top-categories?lat=&lng=&radiusKm=&limit=
+ * Public. Returns top categories for a specific location.
+ */
+locationRouter.get("/top-categories", async (req, res) => {
+  const parsed = z
+    .object({
+      lat: z.coerce.number().min(-90).max(90),
+      lng: z.coerce.number().min(-180).max(180),
+      radiusKm: z.coerce.number().positive().max(100).default(25),
+      limit: z.coerce.number().int().positive().max(20).default(6),
+    })
+    .safeParse(req.query);
+
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.flatten() });
+    return;
+  }
+
+  const categories = await getTopCategoriesForLocation(
+    parsed.data.lat,
+    parsed.data.lng,
+    parsed.data.radiusKm,
+    parsed.data.limit
+  );
+
+  res.json({ success: true, data: categories });
 });
 
 /**

@@ -259,6 +259,18 @@ export const api = {
   // Zones
   getZones: () => request<any[]>("/zones"),
 
+  getTopCategoriesByLocation: (lat: number, lng: number, radiusKm = 25, limit = 6) => {
+    const params = new URLSearchParams({
+      lat: String(lat),
+      lng: String(lng),
+      radiusKm: String(radiusKm),
+      limit: String(limit),
+    });
+    return request<{ category: string; vendorCount: number; avgRating: number; totalReviews: number; score: number }[]>(
+      `/location/top-categories?${params.toString()}`
+    );
+  },
+
   // Reviews
   getVendorRating: (vendorId: string) =>
     request(`/reviews/vendor/${vendorId}/rating`),

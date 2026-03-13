@@ -69,6 +69,72 @@ export interface ZoneWithPolygon {
   active: boolean;
 }
 
+export interface TopCategoryForLocation {
+  category: string;
+  vendorCount: number;
+  avgRating: number;
+  totalReviews: number;
+  score: number;
+}
+
+/**
+ * Amazon-style category ranking: blends availability, quality, and trust signals.
+ */
+export async function getTopCategoriesForLocation(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+  limit = 6
+): Promise<TopCategoryForLocation[]> {
+  const latDelta = radiusKm / 111.32;
+  const lngDelta = radiusKm / (111.32 * Math.cos((lat * Math.PI) / 180));
+
+  const result = await pool.query<TopCategoryForLocation>(
+    `WITH nearby_vendors AS (
+      SELECT
+        vp.vendor_id,
+        vp.service_categories,
+        COALESCE(vra.average_rating, 0)::float AS avg_rating,
+        COALESCE(vra.total_reviews, 0)::int AS total_reviews,
+        (6371 * acos(
+          LEAST(1, cos(radians($1)) * cos(radians(vp.latitude)) * cos(radians(vp.longitude) - radians($2)) +
+          sin(radians($1)) * sin(radians(vp.latitude)))
+        )) AS distance_km,
+        vp.service_radius_km
+      FROM vendor_profiles vp
+      LEFT JOIN vendor_rating_aggregates vra ON vra.vendor_id = vp.vendor_id
+      WHERE vp.verification_status = 'approved'
+        AND vp.latitude BETWEEN $3 AND $4
+        AND vp.longitude BETWEEN $5 AND $6
+    ),
+    eligible AS (
+      SELECT *
+      FROM nearby_vendors nv
+      WHERE nv.distance_km <= $7
+        AND nv.distance_km <= nv.service_radius_km
+    )
+    SELECT
+      cat AS category,
+      COUNT(DISTINCT e.vendor_id)::int AS "vendorCount",
+      ROUND(AVG(e.avg_rating)::numeric, 2)::float AS "avgRating",
+      SUM(e.total_reviews)::int AS "totalReviews",
+      ROUND((
+        COUNT(DISTINCT e.vendor_id) * 100.0 +
+        AVG(e.avg_rating) * 15.0 +
+        LN(1 + GREATEST(SUM(e.total_reviews), 0)) * 12.0
+      )::numeric, 2)::float AS score
+    FROM eligible e
+    CROSS JOIN LATERAL jsonb_array_elements_text(e.service_categories) cat
+    WHERE cat <> 'Other'
+    GROUP BY cat
+    ORDER BY score DESC, "vendorCount" DESC, "avgRating" DESC
+    LIMIT $8`,
+    [lat, lng, lat - latDelta, lat + latDelta, lng - lngDelta, lng + lngDelta, radiusKm, limit]
+  );
+
+  return result.rows;
+}
+
 /**
  * Get all zones with polygon data for map rendering.
  */
