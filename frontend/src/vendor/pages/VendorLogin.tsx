@@ -18,14 +18,24 @@ const VendorLogin = () => {
   const [otpId, setOtpId] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, loginWithTokens } = useAuth();
+  const { user, login, loginWithTokens, logout } = useAuth();
   const navigate = useNavigate();
+
+  const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+  const ensureSwitchedAccount = async (targetEmail: string) => {
+    if (!user?.email) return;
+    if (normalizeEmail(user.email) !== normalizeEmail(targetEmail)) {
+      await logout();
+    }
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast.error("Please fill all fields"); return; }
     setLoading(true);
     try {
+      await ensureSwitchedAccount(email);
       await login({ email, password });
       toast.success("Welcome back!");
       navigate("/dashboard");
@@ -40,6 +50,7 @@ const VendorLogin = () => {
     if (!otpEmail) { toast.error("Enter your email"); return; }
     setLoading(true);
     try {
+      await ensureSwitchedAccount(otpEmail);
       const res = await api.requestOtp(otpEmail, "login");
       if (res.data) {
         setOtpId(res.data.otpId);

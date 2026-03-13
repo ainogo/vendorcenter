@@ -59,6 +59,7 @@ async function refreshAccessToken(): Promise<boolean> {
       localStorage.removeItem("vendor_accessToken");
       localStorage.removeItem("vendor_refreshToken");
       localStorage.removeItem("vendor_user");
+      localStorage.removeItem("vendor_onboarding_status");
       return false;
     }
     const body = await res.json();

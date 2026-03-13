@@ -73,6 +73,12 @@ export function VendorAuthProvider({ children }: { children: ReactNode }) {
     const res = await vendorApi.login(payload);
     if (res.data) {
       if (res.data.actor.role !== "vendor") {
+        localStorage.removeItem("vendor_accessToken");
+        localStorage.removeItem("vendor_refreshToken");
+        localStorage.removeItem("vendor_user");
+        localStorage.removeItem("vendor_onboarding_status");
+        setUser(null);
+        setOnboardingStatusState("unknown");
         throw new Error("This portal is for vendors only. Please use the customer site.");
       }
       localStorage.setItem("vendor_accessToken", res.data.accessToken);
