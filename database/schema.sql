@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS vendor_profiles (
   service_radius_km DOUBLE PRECISION NOT NULL,
   working_hours TEXT NOT NULL,
   document_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  portfolio_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
   verification_status TEXT NOT NULL DEFAULT 'approved',
   profile_edited BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

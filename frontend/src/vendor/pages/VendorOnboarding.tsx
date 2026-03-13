@@ -38,7 +38,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 }
 
 const VendorOnboarding = () => {
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, logout, loading: authLoading, setOnboardingStatus } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [businessName, setBusinessName] = useState("");
@@ -130,6 +130,7 @@ const VendorOnboarding = () => {
         workingHours,
         portfolioUrls: uploadedUrls,
       });
+      setOnboardingStatus("complete");
       toast.success("Onboarding submitted! Your profile is under review.");
       navigate("/dashboard");
     } catch (err: any) {
