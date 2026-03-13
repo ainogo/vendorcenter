@@ -13,7 +13,9 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [topCategoriesOpen, setTopCategoriesOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const topCategoriesRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const routerLocation = useRouterLocation();
   const isServicesPage = routerLocation.pathname === "/services";
@@ -82,10 +84,13 @@ const Header = () => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setProfileDropdownOpen(false);
       }
+      if (topCategoriesRef.current && !topCategoriesRef.current.contains(e.target as Node)) {
+        setTopCategoriesOpen(false);
+      }
     };
-    if (profileDropdownOpen) document.addEventListener("mousedown", handler);
+    if (profileDropdownOpen || topCategoriesOpen) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [profileDropdownOpen]);
+  }, [profileDropdownOpen, topCategoriesOpen]);
 
   return (
     <header className="sticky top-0 z-50 glass">
@@ -213,22 +218,36 @@ const Header = () => {
             >
               All Services
             </Link>
-            <Link
-              to="/services"
-              className="text-xs font-semibold uppercase tracking-wide text-primary/80 hover:text-primary transition-colors whitespace-nowrap"
-              title="Top categories near your selected location"
-            >
-              Top Categories
-            </Link>
-            {navCategories.map((cat) => (
-              <Link
-                key={cat}
-                to={`/services?category=${encodeURIComponent(cat)}`}
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+            <div className="relative" ref={topCategoriesRef}>
+              <button
+                type="button"
+                className="text-xs font-semibold uppercase tracking-wide text-primary/80 hover:text-primary transition-colors whitespace-nowrap flex items-center gap-1"
+                title="Top categories near your selected location"
+                onClick={() => setTopCategoriesOpen((prev) => !prev)}
               >
-                {cat}
-              </Link>
-            ))}
+                Top Categories
+                <ChevronDown className={`w-3 h-3 transition-transform ${topCategoriesOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {topCategoriesOpen && (
+                <div className="absolute left-0 mt-2 w-72 bg-card border border-border rounded-xl shadow-lg py-2 z-50">
+                  {navCategories.length > 0 ? (
+                    navCategories.map((cat) => (
+                      <Link
+                        key={cat}
+                        to={`/services?category=${encodeURIComponent(cat)}`}
+                        className="block px-4 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-secondary transition-colors"
+                        onClick={() => setTopCategoriesOpen(false)}
+                      >
+                        {cat}
+                      </Link>
+                    ))
+                  ) : (
+                    <p className="px-4 py-2 text-sm text-muted-foreground">No top categories available for this location yet.</p>
+                  )}
+                </div>
+              )}
+            </div>
           </nav>
         </div>
       </div>}
