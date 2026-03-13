@@ -243,7 +243,7 @@ const Header = () => {
                       </Link>
                     ))
                   ) : (
-                    <p className="px-4 py-2 text-sm text-muted-foreground">No top categories available for this location yet.</p>
+                    <p className="px-4 py-2 text-sm text-muted-foreground">Top categories are not available for this location right now. Please try nearby locations.</p>
                   )}
                 </div>
               )}
