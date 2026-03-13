@@ -9,6 +9,9 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 
+const PASSWORD_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const PHONE_RULE = /^\d{10}$/;
+
 const Register = () => {
   const [searchParams] = useSearchParams();
   const initialRole = searchParams.get("role") === "vendor" ? "vendor" : "customer";
@@ -36,7 +39,14 @@ const Register = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast.error("Email and password are required"); return; }
-    if (password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+    if (!PASSWORD_RULE.test(password)) {
+      toast.error("Password must be 8+ characters and include uppercase, lowercase, number, and special character");
+      return;
+    }
+    if (phone && !PHONE_RULE.test(phone)) {
+      toast.error("Phone number must be exactly 10 digits");
+      return;
+    }
     if (!agreed) { toast.error("Please accept the terms"); return; }
     setLoading(true);
     try {
@@ -180,8 +190,9 @@ const Register = () => {
             </div>
             <div className="relative">
               <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Phone number" type="tel" className="pl-10 h-12 rounded-xl" value={phone} onChange={e => setPhone(e.target.value)} />
+              <Input placeholder="Phone number" type="tel" inputMode="numeric" maxLength={10} className="pl-10 h-12 rounded-xl" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))} />
             </div>
+            <p className="text-xs text-muted-foreground -mt-2">Phone number should be exactly 10 digits.</p>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -199,6 +210,7 @@ const Register = () => {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            <p className="text-xs text-muted-foreground -mt-2">Use 8+ characters with uppercase, lowercase, number, and special character.</p>
 
             {role === "vendor" && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4">

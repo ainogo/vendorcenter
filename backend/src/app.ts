@@ -27,6 +27,25 @@ import { env } from "./config/env.js";
 
 export const app = express();
 
+const allowAllOrigins = env.corsOrigins.includes("*");
+const allowedOrigins = new Set(env.corsOrigins);
+
+const corsOptions: cors.CorsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowAllOrigins || allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    console.warn(`[cors] blocked origin=${origin}`);
+    callback(null, false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-request-id"],
+  optionsSuccessStatus: 204,
+};
+
 
 // Railway / Vercel / Cloudflare proxy
 app.set("trust proxy", 1);
@@ -47,16 +66,8 @@ app.use(
 
 
 // CORS
-app.use(
-  cors({
-    origin: env.corsOrigins.includes("*")
-      ? true
-      : env.corsOrigins,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 
 // Body limits

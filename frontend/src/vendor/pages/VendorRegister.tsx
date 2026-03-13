@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { vendorApi as api } from "@/vendor/lib/vendorApi";
 import { toast } from "sonner";
 
+const PASSWORD_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const PHONE_RULE = /^\d{10}$/;
+
 const VendorRegister = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -25,8 +28,12 @@ const VendorRegister = () => {
       toast.error("Please fill all required fields");
       return;
     }
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+    if (!PASSWORD_RULE.test(password)) {
+      toast.error("Password must be 8+ characters and include uppercase, lowercase, number, and special character");
+      return;
+    }
+    if (phone && !PHONE_RULE.test(phone)) {
+      toast.error("Phone number must be exactly 10 digits");
       return;
     }
     setLoading(true);
@@ -94,6 +101,11 @@ const VendorRegister = () => {
                 <Input placeholder="Email address" type="email" className="pl-10 h-12 rounded-xl" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
               <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Phone number (optional)" type="tel" inputMode="numeric" maxLength={10} className="pl-10 h-12 rounded-xl" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))} />
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">Phone number should be exactly 10 digits.</p>
+              <div className="relative">
                 <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input placeholder="Business name (optional)" className="pl-10 h-12 rounded-xl" value={businessName} onChange={e => setBusinessName(e.target.value)} />
               </div>
@@ -101,6 +113,7 @@ const VendorRegister = () => {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input placeholder="Password (min 8 characters)" type="password" className="pl-10 h-12 rounded-xl" value={password} onChange={e => setPassword(e.target.value)} />
               </div>
+              <p className="text-xs text-muted-foreground -mt-2">Use 8+ characters with uppercase, lowercase, number, and special character.</p>
               <Button type="submit" disabled={loading} className="w-full h-12 bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0 rounded-xl font-semibold text-base">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
                 Create Vendor Account

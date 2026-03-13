@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { vendorApi as api } from "@/vendor/lib/vendorApi";
 import { toast } from "sonner";
 
+const PASSWORD_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
 type Step = "email" | "otp" | "password";
 
 const VendorForgotPassword = () => {
@@ -42,8 +44,8 @@ const VendorForgotPassword = () => {
   };
 
   const handleResetPassword = async () => {
-    if (!newPassword || newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters"); return;
+    if (!PASSWORD_RULE.test(newPassword)) {
+      toast.error("Password must be 8+ characters and include uppercase, lowercase, number, and special character"); return;
     }
     if (newPassword !== confirmPassword) {
       toast.error("Passwords don't match"); return;
@@ -131,6 +133,7 @@ const VendorForgotPassword = () => {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input placeholder="New password (min 8 characters)" type="password" className="pl-10 h-12 rounded-xl" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
               </div>
+              <p className="text-xs text-muted-foreground -mt-2">Use 8+ characters with uppercase, lowercase, number, and special character.</p>
               <div className="relative">
                 <CheckCircle2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input placeholder="Confirm new password" type="password" className="pl-10 h-12 rounded-xl" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleResetPassword()} />

@@ -4,6 +4,17 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function parseCorsOrigins(raw: string | undefined) {
+  if (!raw) return ["*"];
+
+  const origins = raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return origins.length > 0 ? origins : ["*"];
+}
+
 dotenv.config({
   path: path.resolve(__dirname, "../../../.env"),
   override: true
@@ -37,10 +48,7 @@ export const env = {
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES ?? 5),
   otpMaxAttempts: Number(process.env.OTP_MAX_ATTEMPTS ?? 5),
 
-  // CORS FIX
-  corsOrigins: process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim())
-    : ["*"],
+  corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
 
   emailFromDomain:
     process.env.EMAIL_FROM_DOMAIN ?? "vendorcenter.in",

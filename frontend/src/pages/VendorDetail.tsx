@@ -306,6 +306,9 @@ const VendorDetail = () => {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
+                Select a service, date, and time before submitting your booking request.
+              </p>
+              <p className="text-xs text-muted-foreground text-center">
                 The vendor will review and confirm your booking
               </p>
             </div>
