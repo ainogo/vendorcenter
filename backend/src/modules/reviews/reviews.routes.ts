@@ -2,9 +2,25 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireRole, AuthRequest } from "../../middleware/auth.js";
 import { trackActivity } from "../activity/activity.service.js";
-import { bookingForReview, createReview, refreshVendorRatingAggregate, getVendorRating, getReviewedBookingIds } from "./reviews.repository.js";
+import { bookingForReview, createReview, refreshVendorRatingAggregate, getVendorRating, getReviewedBookingIds, listRecentPublicReviews } from "./reviews.repository.js";
 
 export const reviewsRouter = Router();
+
+reviewsRouter.get("/public", async (req, res) => {
+  const parsed = z
+    .object({
+      limit: z.coerce.number().int().positive().max(12).default(3),
+    })
+    .safeParse(req.query);
+
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.flatten() });
+    return;
+  }
+
+  const reviews = await listRecentPublicReviews(parsed.data.limit);
+  res.json({ success: true, data: reviews });
+});
 
 reviewsRouter.post("/", requireRole(["customer"]), async (req: AuthRequest, res) => {
   const parsed = z

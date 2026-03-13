@@ -274,6 +274,8 @@ export const api = {
   // Reviews
   getVendorRating: (vendorId: string) =>
     request(`/reviews/vendor/${vendorId}/rating`),
+  getPublicReviews: (limit = 3) =>
+    request<{ id: string; reviewText: string; rating: number; customerName: string | null; serviceName: string | null; createdAt: string }[]>(`/reviews/public?limit=${limit}`),
   createReview: (data: { bookingId: string; rating: number; reviewText?: string }) =>
     request("/reviews", { method: "POST", body: JSON.stringify(data) }),
   getMyReviewedBookings: () =>

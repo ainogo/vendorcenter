@@ -56,3 +56,32 @@ export async function getReviewedBookingIds(customerId: string): Promise<string[
   );
   return result.rows.map(r => r.bookingId);
 }
+
+export async function listRecentPublicReviews(limit = 6) {
+  const result = await pool.query<{
+    id: string;
+    reviewText: string | null;
+    rating: number;
+    createdAt: string;
+    customerName: string | null;
+    serviceName: string | null;
+  }>(
+    `SELECT
+      r.id,
+      r.review_text as "reviewText",
+      r.rating,
+      r.created_at as "createdAt",
+      u.name as "customerName",
+      b.service_name as "serviceName"
+     FROM reviews r
+     LEFT JOIN users u ON u.id::text = r.customer_id
+     LEFT JOIN bookings b ON b.id = r.booking_id
+     WHERE r.review_text IS NOT NULL
+       AND length(trim(r.review_text)) > 0
+     ORDER BY r.created_at DESC
+     LIMIT $1`,
+    [limit]
+  );
+
+  return result.rows;
+}
