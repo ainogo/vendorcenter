@@ -22,7 +22,7 @@ async function bootstrap() {
     console.error("Database init failed, starting in degraded mode", error);
   }
 
-  app.listen(env.port, () => {
+  app.listen(env.port, "0.0.0.0", () => {
     console.log(`[${env.appName}] backend listening on port ${env.port}`);
   });
 

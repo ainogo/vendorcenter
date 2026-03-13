@@ -109,6 +109,17 @@ app.get("/health", (_req: Request, res: Response) => {
   });
 });
 
+// Root route for platform default health checks (some providers probe "/")
+app.get("/", (_req: Request, res: Response) => {
+  res.json({
+    success: true,
+    data: {
+      service: "vendorcenter-backend",
+      status: dbState.connected ? "ok" : "degraded",
+    },
+  });
+});
+
 
 app.get("/api/status", (_req: Request, res: Response) => {
   res.json({
