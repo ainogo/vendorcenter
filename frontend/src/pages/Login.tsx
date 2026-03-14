@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { loginWithTokens } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || "/";
 
   const clearCustomerSession = () => {
     localStorage.removeItem("customer_accessToken");
@@ -51,7 +53,7 @@ const Login = () => {
         refreshToken: result.refreshToken,
         actor: result.actor as any,
       });
-      navigate("/");
+      navigate(redirectPath);
       return;
     }
 
