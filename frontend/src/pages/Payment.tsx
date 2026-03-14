@@ -19,8 +19,6 @@ const Payment = () => {
   const [bookingData, setBookingData] = useState<any | null>(null);
 
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const queryAmountPaise = Number(params.get("amount") || "0");
-  const queryTxn = params.get("txn") || "-";
   const paymentToken = params.get("pt") || "";
 
   useEffect(() => {
@@ -54,8 +52,8 @@ const Payment = () => {
     }
     setPaying(true);
     try {
-      const res = await api.payBooking(bookingId, paymentToken);
-      toast.success(`Payment successful. OTP sent to your email. Token: ${res.data?.paymentToken || "generated"}`);
+      await api.payBooking(bookingId, paymentToken);
+      toast.success("Payment successful. OTP sent to your email.");
       navigate("/account?tab=bookings");
     } catch (err: any) {
       toast.error(err.message || "Payment failed");
@@ -153,8 +151,7 @@ const Payment = () => {
 
   const serverAmountPaise = Number(bookingData?.finalAmount ?? 0);
   const amountInr = Number.isFinite(serverAmountPaise) ? (serverAmountPaise / 100).toFixed(2) : "0.00";
-  const txn = bookingData?.transactionId || queryTxn;
-  const hasAmountMismatch = Number.isFinite(queryAmountPaise) && serverAmountPaise > 0 && queryAmountPaise !== serverAmountPaise;
+  const txn = bookingData?.transactionId || "-";
 
   return (
     <Layout>
@@ -172,12 +169,6 @@ const Payment = () => {
               <p className="text-sm"><span className="text-muted-foreground">Transaction ID:</span> {txn}</p>
               <p className="text-sm"><span className="text-muted-foreground">Amount:</span> INR {amountInr}</p>
             </div>
-
-            {hasAmountMismatch && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                URL amount changed tha, but payable amount server se verify karke liya gaya hai.
-              </div>
-            )}
 
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 flex gap-2 items-start">
               <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />

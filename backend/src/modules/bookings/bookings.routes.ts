@@ -242,7 +242,8 @@ bookingsRouter.patch("/:bookingId/final-amount", requireRole(["vendor"]), async 
     return;
   }
 
-  const updated = await updateBookingFinalAmount(req.params.bookingId, parsed.data.amount);
+  const rotatedTransactionId = `txn_${nanoid(12)}`;
+  const updated = await updateBookingFinalAmount(req.params.bookingId, parsed.data.amount, rotatedTransactionId);
   res.json({ success: true, data: updated });
 });
 
@@ -259,6 +260,10 @@ bookingsRouter.post("/:bookingId/complete", requireRole(["vendor"]), async (req:
   }
   if (booking.status !== "in_progress") {
     res.status(400).json({ success: false, error: "Booking must be in progress to mark complete" });
+    return;
+  }
+  if (booking.paymentStatus === "success") {
+    res.status(409).json({ success: false, error: "Payment already completed for this booking" });
     return;
   }
   if (!booking.finalAmount || booking.finalAmount <= 0) {
@@ -291,8 +296,8 @@ bookingsRouter.post("/:bookingId/complete", requireRole(["vendor"]), async (req:
   const vendorProfile = await getVendorProfile(booking.vendorId);
   const amountStr = booking.finalAmount ? (booking.finalAmount / 100).toFixed(2) : undefined;
 
-  // Demo payment link (customer confirms dummy payment then OTP is generated)
-  const paymentLink = `https://vendorcenter.in/pay/${booking.id}?amount=${booking.finalAmount ?? 0}&txn=${booking.transactionId}&pt=${paymentToken}`;
+  // Keep link minimal: do not expose mutable financial params in URL.
+  const paymentLink = `https://vendorcenter.in/pay/${booking.id}?pt=${paymentToken}`;
 
   if (customer?.email) {
     sendNotificationEmail({
@@ -340,6 +345,10 @@ bookingsRouter.post("/:bookingId/pay", requireRole(["customer"]), async (req: Au
   }
   if (booking.status !== "in_progress") {
     res.status(400).json({ success: false, error: "Booking is not in progress" });
+    return;
+  }
+  if (booking.paymentStatus === "success") {
+    res.status(409).json({ success: false, error: "Payment already completed for this booking" });
     return;
   }
   if (!booking.completionRequestedAt || !booking.paymentRequestTokenHash || !booking.paymentRequestExpires) {

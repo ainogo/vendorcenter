@@ -126,10 +126,11 @@ export async function getVendorBookingStats(vendorId: string) {
   return Number(result.rows[0]?.total ?? "0");
 }
 
-export async function updateBookingFinalAmount(bookingId: string, finalAmount: number) {
+export async function updateBookingFinalAmount(bookingId: string, finalAmount: number, transactionId: string) {
   const result = await pool.query<DbBooking>(
     `UPDATE bookings
      SET final_amount = $2,
+       transaction_id = $3,
        payment_status = CASE WHEN status = 'completed' THEN payment_status ELSE 'pending' END,
        completion_requested_at = NULL,
        payment_request_token_hash = NULL,
@@ -139,7 +140,7 @@ export async function updateBookingFinalAmount(bookingId: string, finalAmount: n
        updated_at = NOW()
      WHERE id = $1
      RETURNING id, customer_id as "customerId", vendor_id as "vendorId", service_name as "serviceName", status, transaction_id as "transactionId", payment_status as "paymentStatus", scheduled_date as "scheduledDate", scheduled_time as "scheduledTime", notes, final_amount as "finalAmount", work_started_at as "workStartedAt", completion_requested_at as "completionRequestedAt", payment_request_token_hash as "paymentRequestTokenHash", payment_request_expires as "paymentRequestExpires", rejection_reason as "rejectionReason", created_at as "createdAt", updated_at as "updatedAt"`,
-    [bookingId, finalAmount]
+    [bookingId, finalAmount, transactionId]
   );
   return result.rows[0] ?? null;
 }
