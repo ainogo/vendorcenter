@@ -16,11 +16,11 @@ const Payment = () => {
   const [paying, setPaying] = useState(false);
   const [checkingOwnership, setCheckingOwnership] = useState(false);
   const [ownerAllowed, setOwnerAllowed] = useState<boolean | null>(null);
+  const [bookingData, setBookingData] = useState<any | null>(null);
 
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const amountPaise = Number(params.get("amount") || "0");
-  const amountInr = Number.isFinite(amountPaise) ? (amountPaise / 100).toFixed(2) : "0.00";
-  const txn = params.get("txn") || "-";
+  const queryAmountPaise = Number(params.get("amount") || "0");
+  const queryTxn = params.get("txn") || "-";
   const paymentToken = params.get("pt") || "";
 
   useEffect(() => {
@@ -30,8 +30,10 @@ const Payment = () => {
     api.getBookings()
       .then((res) => {
         if (!active) return;
-        const mine = (res.data || []).some((b: any) => b.id === bookingId);
+        const mineBooking = (res.data || []).find((b: any) => b.id === bookingId) || null;
+        const mine = !!mineBooking;
         setOwnerAllowed(mine);
+        setBookingData(mineBooking);
       })
       .catch(() => {
         if (!active) return;
@@ -149,6 +151,11 @@ const Payment = () => {
     );
   }
 
+  const serverAmountPaise = Number(bookingData?.finalAmount ?? 0);
+  const amountInr = Number.isFinite(serverAmountPaise) ? (serverAmountPaise / 100).toFixed(2) : "0.00";
+  const txn = bookingData?.transactionId || queryTxn;
+  const hasAmountMismatch = Number.isFinite(queryAmountPaise) && serverAmountPaise > 0 && queryAmountPaise !== serverAmountPaise;
+
   return (
     <Layout>
       <div className="container py-10 max-w-xl">
@@ -165,6 +172,12 @@ const Payment = () => {
               <p className="text-sm"><span className="text-muted-foreground">Transaction ID:</span> {txn}</p>
               <p className="text-sm"><span className="text-muted-foreground">Amount:</span> INR {amountInr}</p>
             </div>
+
+            {hasAmountMismatch && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                URL amount changed tha, but payable amount server se verify karke liya gaya hai.
+              </div>
+            )}
 
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 flex gap-2 items-start">
               <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
