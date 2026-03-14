@@ -38,6 +38,12 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
   }
 }
 
+function resolveProfileImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http") || url.startsWith("/api/")) return url;
+  return `/api/uploads/files/${url}`;
+}
+
 const VendorEditProfile = () => {
   const { user, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -116,7 +122,7 @@ const VendorEditProfile = () => {
         if (!isActive) return;
         if (res.data?.profilePictureUrl) {
           const url = res.data.profilePictureUrl;
-          setProfilePicPreview(url.startsWith("http") ? url : `/api/uploads/files/${url}`);
+          setProfilePicPreview(resolveProfileImageUrl(url));
           setProfilePicUrl(url);
         }
       })
@@ -159,16 +165,21 @@ const VendorEditProfile = () => {
   const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setProfilePicPreview(URL.createObjectURL(file));
+    const localPreview = URL.createObjectURL(file);
+    setProfilePicPreview(localPreview);
     setUploadingPic(true);
     try {
       const result = await api.uploadFile(file);
-      setProfilePicUrl(result.url);
-      await api.updateProfile({ profilePictureUrl: result.url });
+      const updated = await api.updateProfile({ profilePictureUrl: result.url });
+      const savedUrl = updated.data?.profilePictureUrl || result.url;
+      setProfilePicUrl(savedUrl);
+      setProfilePicPreview(resolveProfileImageUrl(savedUrl));
       toast.success("Profile picture updated!");
     } catch {
+      setProfilePicPreview(resolveProfileImageUrl(profilePicUrl));
       toast.error("Failed to upload profile picture");
     } finally {
+      URL.revokeObjectURL(localPreview);
       setUploadingPic(false);
     }
   };

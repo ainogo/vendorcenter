@@ -11,6 +11,12 @@ import { useAuth } from "@/vendor/hooks/useVendorAuth";
 import { vendorApi as api } from "@/vendor/lib/vendorApi";
 import { isVendorProfileComplete } from "@/vendor/lib/profileCompletion";
 
+function resolveProfileImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http") || url.startsWith("/api/")) return url;
+  return `/api/uploads/files/${url}`;
+}
+
 const VendorDashboard = () => {
   const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
@@ -38,7 +44,7 @@ const VendorDashboard = () => {
 
     api.getProfile()
       .then((res) => {
-        if (res.data?.profilePictureUrl) setProfilePicUrl(res.data.profilePictureUrl);
+        if (res.data?.profilePictureUrl) setProfilePicUrl(resolveProfileImageUrl(res.data.profilePictureUrl));
       })
       .catch(() => {});
 

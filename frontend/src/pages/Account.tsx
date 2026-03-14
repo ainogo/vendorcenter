@@ -12,6 +12,12 @@ import { toast } from "sonner";
 
 type Tab = "bookings" | "settings";
 
+function resolveProfileImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http") || url.startsWith("/api/")) return url;
+  return `/api/uploads/files/${url}`;
+}
+
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-blue-100 text-blue-800",
@@ -112,11 +118,7 @@ const Account = () => {
   const displayName = profile?.name || user.name || user.email.split("@")[0];
   const displayPhone = profile?.phone || user.phone || "Not set";
   const displayEmail = profile?.email || user.email;
-  const profilePicUrl = (profile as any)?.profilePictureUrl
-    ? ((profile as any).profilePictureUrl.startsWith("http") || (profile as any).profilePictureUrl.startsWith("/api/")
-        ? (profile as any).profilePictureUrl
-        : `/api/uploads/files/${(profile as any).profilePictureUrl}`)
-    : null;
+  const profilePicUrl = resolveProfileImageUrl((profile as any)?.profilePictureUrl);
 
   const tabs = [
     { key: "bookings" as Tab, label: "Bookings", icon: <ClipboardList className="w-5 h-5" /> },
@@ -391,29 +393,32 @@ function EditProfilePanel({ open, onClose, profile, onSaved }: {
     setName(profile.name ?? "");
     setPhone(profile.phone ?? "");
     setNewPicUrl(null);
-    setPreviewUrl(profile.profilePictureUrl
-      ? (profile.profilePictureUrl.startsWith("http") || profile.profilePictureUrl.startsWith("/api/")
-          ? profile.profilePictureUrl
-          : `/api/uploads/files/${profile.profilePictureUrl}`)
-      : null);
+    setPreviewUrl(resolveProfileImageUrl(profile.profilePictureUrl));
   }, [open, profile.name, profile.phone, profile.profilePictureUrl]);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPreviewUrl(URL.createObjectURL(file));
+    const localPreview = URL.createObjectURL(file);
+    setPreviewUrl(localPreview);
     setUploading(true);
     try {
       const result = await api.uploadFile(file);
       setNewPicUrl(result.url);
     } catch {
+      setPreviewUrl(resolveProfileImageUrl(profile.profilePictureUrl));
       toast.error("Photo upload failed");
     } finally {
+      URL.revokeObjectURL(localPreview);
       setUploading(false);
     }
   };
 
   const handleSave = async () => {
+    if (uploading) {
+      toast.error("Please wait until photo upload finishes");
+      return;
+    }
     if (phone && !/^\d{10}$/.test(phone)) {
       setPhoneError("Phone number must be exactly 10 digits");
       return;
@@ -421,11 +426,12 @@ function EditProfilePanel({ open, onClose, profile, onSaved }: {
     setPhoneError("");
     setSaving(true);
     try {
-      await api.updateProfile({
+      const updated = await api.updateProfile({
         name: name || undefined,
         phone: phone || undefined,
         profilePictureUrl: newPicUrl || undefined,
       });
+      setPreviewUrl(resolveProfileImageUrl(updated.data?.profilePictureUrl || newPicUrl || profile.profilePictureUrl));
       toast.success("Profile updated!");
       onSaved();
       onClose();
@@ -522,10 +528,10 @@ function EditProfilePanel({ open, onClose, profile, onSaved }: {
             <div className="p-5 border-t border-border">
               <Button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || uploading}
                 className="w-full h-12 rounded-xl gradient-bg text-primary-foreground font-semibold"
               >
-                {saving ? "Saving..." : "Save Changes"}
+                {uploading ? "Uploading photo..." : saving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </motion.div>

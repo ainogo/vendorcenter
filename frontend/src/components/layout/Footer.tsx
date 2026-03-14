@@ -9,7 +9,7 @@ const socialLinks = [
 ];
 
 const companyLinks: { label: string; to: string }[] = [
-  { label: "About Us", to: "/" },
+  { label: "About Us", to: "/about" },
   { label: "Services", to: "/services" },
   { label: "Explore", to: "/explore" },
 ];
@@ -91,11 +91,18 @@ const Footer = () => {
               </li>
               <li className="flex items-start gap-2 text-sm text-background/60">
                 <Phone className="w-4 h-4 mt-0.5 shrink-0" />
-                <a href="tel:+919876543210" className="hover:text-primary transition-colors">+91 98765 43210</a>
+                <span>8123456789</span>
               </li>
               <li className="flex items-start gap-2 text-sm text-background/60">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
-                Bangalore, India
+                <a
+                  href="https://maps.google.com/?q=Ratnagiri,+Maharashtra"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  Ratnagiri, Maharashtra
+                </a>
               </li>
             </ul>
           </div>
@@ -104,9 +111,9 @@ const Footer = () => {
         <div className="border-t border-background/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-background/40">© 2026 VendorCenter. All rights reserved.</p>
           <div className="flex gap-4">
-            <Link to="/" className="text-xs text-background/40 hover:text-background/70 transition-colors">Privacy Policy</Link>
-            <Link to="/" className="text-xs text-background/40 hover:text-background/70 transition-colors">Terms of Service</Link>
-            <Link to="/" className="text-xs text-background/40 hover:text-background/70 transition-colors">Cookie Policy</Link>
+            <Link to="/privacy" className="text-xs text-background/40 hover:text-background/70 transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="text-xs text-background/40 hover:text-background/70 transition-colors">Terms of Service</Link>
+            <Link to="/cookies" className="text-xs text-background/40 hover:text-background/70 transition-colors">Cookie Policy</Link>
           </div>
         </div>
       </div>
