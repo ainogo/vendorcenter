@@ -12,14 +12,6 @@ import { toast } from "sonner";
 
 type Tab = "bookings" | "settings";
 
-/** Resolve a stored profile picture URL to a displayable URL. */
-function resolveProfilePicUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  return url.startsWith("http") || url.startsWith("/api/")
-    ? url
-    : `/api/uploads/files/${url}`;
-}
-
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-blue-100 text-blue-800",
@@ -44,7 +36,6 @@ const Account = () => {
   const initialTab = (searchParams.get("tab") as Tab) || "bookings";
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [editOpen, setEditOpen] = useState(false);
-  const [uploadingPic, setUploadingPic] = useState(false);
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
@@ -118,27 +109,14 @@ const Account = () => {
     }
   };
 
-  const handleQuickPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingPic(true);
-    try {
-      const result = await api.uploadFile(file);
-      await api.updateProfile({ profilePictureUrl: result.url });
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
-      toast.success("Profile picture updated!");
-    } catch {
-      toast.error("Failed to upload profile picture");
-    } finally {
-      setUploadingPic(false);
-      e.target.value = "";
-    }
-  };
-
   const displayName = profile?.name || user.name || user.email.split("@")[0];
   const displayPhone = profile?.phone || user.phone || "Not set";
   const displayEmail = profile?.email || user.email;
-  const profilePicUrl = resolveProfilePicUrl((profile as any)?.profilePictureUrl);
+  const profilePicUrl = (profile as any)?.profilePictureUrl
+    ? ((profile as any).profilePictureUrl.startsWith("http") || (profile as any).profilePictureUrl.startsWith("/api/")
+        ? (profile as any).profilePictureUrl
+        : `/api/uploads/files/${(profile as any).profilePictureUrl}`)
+    : null;
 
   const tabs = [
     { key: "bookings" as Tab, label: "Bookings", icon: <ClipboardList className="w-5 h-5" /> },
@@ -152,23 +130,13 @@ const Account = () => {
         <div className="container py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="relative shrink-0">
-                {profilePicUrl ? (
-                  <img src={profilePicUrl} alt={displayName} className="w-16 h-16 rounded-full object-cover border-2 border-white/30" />
-                ) : (
-                  <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
-                    <User className="w-8 h-8 text-white/70" />
-                  </div>
-                )}
-                <label className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-md hover:opacity-90">
-                  {uploadingPic ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Camera className="w-3.5 h-3.5" />
-                  )}
-                  <input type="file" accept="image/*" className="hidden" onChange={handleQuickPhotoChange} disabled={uploadingPic} />
-                </label>
-              </div>
+              {profilePicUrl ? (
+                <img src={profilePicUrl} alt={displayName} className="w-16 h-16 rounded-full object-cover border-2 border-white/30" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+                  <User className="w-8 h-8 text-white/70" />
+                </div>
+              )}
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold">{displayName}</h1>
                 <p className="text-sm text-white/70 mt-1">
@@ -423,25 +391,23 @@ function EditProfilePanel({ open, onClose, profile, onSaved }: {
     setName(profile.name ?? "");
     setPhone(profile.phone ?? "");
     setNewPicUrl(null);
-    setPreviewUrl(resolveProfilePicUrl(profile.profilePictureUrl));
+    setPreviewUrl(profile.profilePictureUrl
+      ? (profile.profilePictureUrl.startsWith("http") || profile.profilePictureUrl.startsWith("/api/")
+          ? profile.profilePictureUrl
+          : `/api/uploads/files/${profile.profilePictureUrl}`)
+      : null);
   }, [open, profile.name, profile.phone, profile.profilePictureUrl]);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
+    setPreviewUrl(URL.createObjectURL(file));
     setUploading(true);
     try {
       const result = await api.uploadFile(file);
-      URL.revokeObjectURL(objectUrl);
       setNewPicUrl(result.url);
     } catch {
       toast.error("Photo upload failed");
-      // Revert preview to original profile picture on failure
-      setPreviewUrl(resolveProfilePicUrl(profile.profilePictureUrl));
-      URL.revokeObjectURL(objectUrl);
-      e.target.value = "";
     } finally {
       setUploading(false);
     }
