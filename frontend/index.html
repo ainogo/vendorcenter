@@ -23,15 +23,14 @@
   <meta property="og:description" content="Team LV">
   <meta name="twitter:description" content="Team LV">
   <style>
-    /* Keep external chatbot compact without distorting its internal layout. */
+    /* Keep external chatbot compact without leaving a transparent ghost area. */
     iframe[src*="noupe.com"] {
-      transform: scale(0.85) !important;
-      transform-origin: bottom right !important;
+      zoom: 0.85;
     }
 
     @media (max-width: 640px) {
       iframe[src*="noupe.com"] {
-        transform: scale(0.78) !important;
+        zoom: 0.78;
       }
     }
   </style>
