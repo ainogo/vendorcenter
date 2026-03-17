@@ -1,5 +1,6 @@
 import { app } from "./app.js";
 import { env } from "./config/env.js";
+import { getSecurityConfigStatus } from "./config/env.js";
 import { initializeDatabase } from "./db/init.js";
 import { dbState } from "./db/state.js";
 import { processQueuedEmailJobs } from "./modules/notifications/notifications.repository.js";
@@ -11,7 +12,30 @@ process.on("unhandledRejection", (reason) => {
 
 const EMAIL_WORKER_INTERVAL = Number(process.env.EMAIL_WORKER_INTERVAL_MS ?? 15000);
 
+function validateSecurityConfiguration() {
+  const status = getSecurityConfigStatus();
+
+  if (status.usingDefaultAccessSecret || status.usingDefaultRefreshSecret) {
+    const message = "JWT secrets are using insecure defaults; configure JWT_ACCESS_SECRET and JWT_REFRESH_SECRET";
+
+    if (env.nodeEnv === "production" && status.strictModeEnabled) {
+      throw new Error(`[security] ${message}`);
+    }
+
+    console.warn(`[security] ${message}`);
+    if (env.nodeEnv === "production") {
+      console.warn("[security] Set SECURITY_STRICT_MODE=true after env rollout to enforce fail-fast startup.");
+    }
+  }
+
+  if (status.corsWildcard) {
+    console.warn("[security] CORS_ORIGINS is set to wildcard; use explicit origins for production.");
+  }
+}
+
 async function bootstrap() {
+  validateSecurityConfiguration();
+
   try {
     await initializeDatabase();
     dbState.connected = true;

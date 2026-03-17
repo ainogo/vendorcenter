@@ -27,6 +27,11 @@ import { env } from "./config/env.js";
 
 export const app = express();
 
+const allowedCorsOrigins = env.corsOrigins
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 
 // Railway / Vercel / Cloudflare proxy
 app.set("trust proxy", 1);
@@ -48,9 +53,20 @@ app.use(
 
 // CORS
 app.use(cors({
-  origin: env.corsOrigins === "*"
-    ? true
-    : env.corsOrigins.split(",").map(s => s.trim()),
+  origin: (origin, callback) => {
+    // Allow non-browser or same-origin server-to-server requests.
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedCorsOrigins.includes("*") || allowedCorsOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Origin not allowed by CORS"));
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],

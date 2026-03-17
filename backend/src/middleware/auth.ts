@@ -9,6 +9,19 @@ export interface AuthRequest extends Request {
   };
 }
 
+export function getActorFromBearerToken(authorization?: string): AuthRequest["actor"] | null {
+  if (!authorization?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  try {
+    const decoded = verifyAccessToken(authorization.replace("Bearer ", ""));
+    return { id: decoded.userId, role: decoded.role };
+  } catch {
+    return null;
+  }
+}
+
 export function requireRole(allowedRoles: AppRole[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     const authorization = req.header("authorization");
@@ -17,21 +30,18 @@ export function requireRole(allowedRoles: AppRole[]) {
       return;
     }
 
-    let payload: { userId: string; role: AppRole };
-    try {
-      const decoded = verifyAccessToken(authorization.replace("Bearer ", ""));
-      payload = { userId: decoded.userId, role: decoded.role };
-    } catch {
+    const actor = getActorFromBearerToken(authorization);
+    if (!actor) {
       res.status(401).json({ success: false, error: "Invalid or expired token" });
       return;
     }
 
-    if (!allowedRoles.includes(payload.role)) {
+    if (!allowedRoles.includes(actor.role)) {
       res.status(403).json({ success: false, error: "Forbidden for this role" });
       return;
     }
 
-    req.actor = { id: payload.userId, role: payload.role };
+    req.actor = actor;
     next();
   };
 }

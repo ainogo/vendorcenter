@@ -38,7 +38,8 @@ export const env = {
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES ?? 5),
   otpMaxAttempts: Number(process.env.OTP_MAX_ATTEMPTS ?? 5),
 
-  corsOrigins: process.env.CORS_ORIGINS ?? "*",
+  corsOrigins: process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:4173",
+  securityStrictMode: process.env.SECURITY_STRICT_MODE === "true",
 
   emailFromDomain:
     process.env.EMAIL_FROM_DOMAIN ?? "vendorcenter.in",
@@ -50,3 +51,19 @@ export const env = {
   s3Bucket:
     process.env.S3_BUCKET ?? "vendorcenter-media"
 };
+
+const DEFAULT_ACCESS_SECRET = "change_me_access";
+const DEFAULT_REFRESH_SECRET = "change_me_refresh";
+
+export function getSecurityConfigStatus() {
+  const usingDefaultAccessSecret = env.jwtAccessSecret === DEFAULT_ACCESS_SECRET;
+  const usingDefaultRefreshSecret = env.jwtRefreshSecret === DEFAULT_REFRESH_SECRET;
+  const corsWildcard = env.corsOrigins.trim() === "*";
+
+  return {
+    usingDefaultAccessSecret,
+    usingDefaultRefreshSecret,
+    corsWildcard,
+    strictModeEnabled: env.securityStrictMode,
+  };
+}
