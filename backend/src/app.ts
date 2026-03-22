@@ -20,6 +20,7 @@ import { uploadsRouter } from "./modules/uploads/uploads.routes.js";
 import { mapsRouter } from "./modules/maps/maps.routes.js";
 import { locationRouter } from "./modules/location/location.routes.js";
 import { emailTestRouter } from "./modules/email-test/email-test.routes.js";
+import { aiAssistantRouter } from "./modules/ai-assistant/ai-assistant.routes.js";
 
 import { dbState } from "./db/state.js";
 import { requestContext, requestLogger } from "./middleware/request-context.js";
@@ -61,6 +62,12 @@ app.use(cors({
     }
 
     if (allowedCorsOrigins.includes("*") || allowedCorsOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    // In development, allow any localhost origin (handles Vite port fallback)
+    if (env.nodeEnv !== "production" && /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
       callback(null, true);
       return;
     }
@@ -180,6 +187,7 @@ app.use("/api/uploads", uploadsRouter);
 app.use("/api/maps", mapsRouter);
 app.use("/api/location", locationRouter);
 app.use("/api/email-test", emailTestRouter);
+app.use("/api/ai-assistant", aiAssistantRouter);
 
 
 // Global error handler

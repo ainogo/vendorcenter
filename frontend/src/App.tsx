@@ -19,6 +19,7 @@ import Terms from "./pages/Terms";
 import Cookies from "./pages/Cookies";
 import Payment from "./pages/Payment";
 import NotFound from "./pages/NotFound";
+import AiAssistantChat from "./components/AiAssistantChat";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/pay/:bookingId" element={<Payment />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <AiAssistantChat />
         </BrowserRouter>
       </TooltipProvider>
       </LocationProvider>

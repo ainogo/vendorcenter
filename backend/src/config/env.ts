@@ -38,7 +38,7 @@ export const env = {
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES ?? 5),
   otpMaxAttempts: Number(process.env.OTP_MAX_ATTEMPTS ?? 5),
 
-  corsOrigins: process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:4173",
+  corsOrigins: process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:3001,http://localhost:4173,http://localhost:5173",
   securityStrictMode: process.env.SECURITY_STRICT_MODE === "true",
 
   emailFromDomain:
@@ -49,7 +49,10 @@ export const env = {
     process.env.SUPABASE_SERVICE_KEY ?? "",
 
   s3Bucket:
-    process.env.S3_BUCKET ?? "vendorcenter-media"
+    process.env.S3_BUCKET ?? "vendorcenter-media",
+
+  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
 };
 
 const DEFAULT_ACCESS_SECRET = "change_me_access";

@@ -21,6 +21,11 @@ vendorcenter/
 	- ai-features.md
 	- AI_PLAN.md
 	- modules/
+- ai-milestone-docs/
+	- src/
+	- output/
+	- package.json
+	- README.md
 - infra/
 	- docker-compose.yml
 	- Dockerfile
@@ -52,3 +57,9 @@ Build:
 - Production scripts and runbooks remain in deploy/
 - Architecture notes: docs/architecture.md
 - AI roadmap: docs/ai-features.md and docs/AI_PLAN.md
+
+## Local AI Milestone Workspace
+
+- A standalone planning/documentation workspace exists at `ai-milestone-docs/`.
+- It is local-only and used for generating AI integration planning PDFs.
+- It is not part of runtime services or deployment paths.
