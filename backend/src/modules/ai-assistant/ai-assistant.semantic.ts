@@ -1,6 +1,11 @@
 import { pool } from "../../db/pool.js";
-import { generateEmbedding } from "../../services/embeddingService.js";
 import type { Intent, VendorResult } from "./ai-assistant.types.js";
+
+// Lazy import: onnxruntime may not be available on all platforms
+async function getEmbedding(text: string): Promise<number[]> {
+  const { generateEmbedding } = await import("../../services/embeddingService.js");
+  return generateEmbedding(text);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Semantic Search — pgvector-powered intent/category/FAQ matching
@@ -27,7 +32,7 @@ interface FaqMatch {
  */
 export async function semanticCategoryMatch(query: string): Promise<CategoryMatch | null> {
   try {
-    const embedding = await generateEmbedding(query);
+    const embedding = await getEmbedding(query);
     const vectorStr = `[${embedding.join(",")}]`;
 
     const result = await pool.query(
@@ -57,7 +62,7 @@ export async function semanticCategoryMatch(query: string): Promise<CategoryMatc
  */
 export async function semanticFaqMatch(query: string, lang?: string): Promise<FaqMatch | null> {
   try {
-    const embedding = await generateEmbedding(query);
+    const embedding = await getEmbedding(query);
     const vectorStr = `[${embedding.join(",")}]`;
 
     const langFilter = lang ? `AND lang = $2` : "";
@@ -98,7 +103,7 @@ export async function semanticVendorSearch(
   limit = 5,
 ): Promise<VendorResult[]> {
   try {
-    const embedding = await generateEmbedding(query);
+    const embedding = await getEmbedding(query);
     const vectorStr = `[${embedding.join(",")}]`;
 
     const hasLocation = lat != null && lng != null;
