@@ -223,7 +223,7 @@ export function isAssistantAvailable(): boolean {
 (() => {
   const geminiCount = getGeminiApiKeys().length;
   const hasGroq = !!env.groqApiKey;
-  console.log(`[assistant-ai] Provider config: ${geminiCount} Gemini key(s), Groq=${hasGroq ? "yes" : "no"}, model=${env.geminiModel}`);
+  console.log(`[assistant-ai] Provider config: Groq=${hasGroq ? "yes (primary)" : "no"}, ${geminiCount} Gemini key(s) (fallback), model=${env.geminiModel}`);
   if (geminiCount === 0 && !hasGroq) {
     console.warn("[assistant-ai] WARNING: No AI provider keys configured — chatbot will return static fallbacks");
   }
@@ -480,43 +480,28 @@ async function callGroqProvider(userMessage: string, history: ConversationTurn[]
 export async function callAssistantModel(userMessage: string, history: ConversationTurn[], lang?: string): Promise<AssistantDecision> {
   const chatMode = shouldUseChatMode(userMessage);
   let lastError: unknown;
-  const hasGeminiKeys = getGeminiApiKeys().length > 0;
-  const { allOnCooldown } = hasGeminiKeys ? getCandidateKeyIndices() : { allOnCooldown: false };
   const hasGroq = !!env.groqApiKey;
+  const hasGeminiKeys = getGeminiApiKeys().length > 0;
 
-  // If all Gemini keys are on cooldown, try Groq FIRST to avoid wasting time
-  const tryGroqFirst = allOnCooldown && hasGroq;
-
-  if (tryGroqFirst) {
-    console.log("[assistant-ai] All Gemini keys on cooldown — trying Groq first");
+  // PRIMARY: Try Groq first — more reliable rate limits
+  if (hasGroq) {
     try {
       const rawText = await callGroqProvider(userMessage, history, chatMode, lang);
       return normalizeResponse(rawText, "groq", chatMode);
     } catch (error) {
       lastError = error;
-      console.warn("[assistant-ai] Groq failed (tried first):", error instanceof Error ? error.message : error);
+      console.warn("[assistant-ai] Groq (primary) failed:", error instanceof Error ? error.message : error);
     }
   }
 
-  // Try Gemini (skip if keys are exhausted and Groq already tried)
-  if (hasGeminiKeys && !tryGroqFirst) {
+  // FALLBACK: Try Gemini keys (rotate through all available)
+  if (hasGeminiKeys) {
     try {
       const rawText = await callGeminiProvider(userMessage, history, chatMode, lang);
       return normalizeResponse(rawText, "gemini", chatMode);
     } catch (error) {
       lastError = error;
-      console.warn("[assistant-ai] Gemini failed, trying Groq fallback:", error instanceof Error ? error.message : error);
-    }
-  }
-
-  // Groq fallback (if not tried first already)
-  if (hasGroq && !tryGroqFirst) {
-    try {
-      const rawText = await callGroqProvider(userMessage, history, chatMode, lang);
-      return normalizeResponse(rawText, "groq", chatMode);
-    } catch (error) {
-      lastError = error;
-      console.warn("[assistant-ai] Groq also failed:", error instanceof Error ? error.message : error);
+      console.warn("[assistant-ai] Gemini (fallback) also failed:", error instanceof Error ? error.message : error);
     }
   }
 
