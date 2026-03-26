@@ -16,7 +16,7 @@ interface DisplayCategory {
 }
 
 const CategoriesSection = () => {
-  const { t } = useTranslation("home");
+  const { t } = useTranslation(["home", "categories"]);
   const { location } = useLocation();
   const [cats, setCats] = useState<DisplayCategory[]>(
     SERVICE_CATEGORIES.map((c, i) => ({
@@ -80,6 +80,25 @@ const CategoriesSection = () => {
   const headerRef = useScrollReveal<HTMLDivElement>({ preset: "fadeUp" });
   const gridRef = useScrollReveal<HTMLDivElement>({ preset: "fadeUp", stagger: 0.06, children: true, delay: 0.1 });
 
+  /** Map DB category name (e.g. "AC Repair") → i18n key (e.g. "acRepair") */
+  const categoryI18nKey = (name: string): string => {
+    const words = name.split(/\s+/);
+    return words
+      .map((w, i) =>
+        i === 0
+          ? w.toLowerCase()
+          : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      )
+      .join("");
+  };
+
+  /** Get translated category name, falling back to raw DB name */
+  const getCategoryName = (name: string): string => {
+    const key = `categories:${categoryI18nKey(name)}`;
+    const translated = t(key);
+    return translated !== key ? translated : name;
+  };
+
   return (
     <section className="py-16 md:py-20 bg-background gradient-mesh">
       <div className="container">
@@ -91,7 +110,7 @@ const CategoriesSection = () => {
             <p className="text-muted-foreground mt-2">{t("categories.subtitle")}</p>
           </div>
           <Link to="/services" className="hidden md:flex items-center gap-1 text-sm font-medium text-primary link-underline">
-            View All <ArrowRight className="w-3.5 h-3.5" />
+            {t("home:categories.viewAll")} <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
@@ -103,8 +122,8 @@ const CategoriesSection = () => {
                 className="group relative p-5 rounded-2xl bg-card border border-border/60 hover:border-primary/30 transition-all duration-300 text-left card-3d border-glow block"
               >
                 <div className="text-4xl mb-3 transition-transform duration-300 group-hover:scale-110">{cat.icon}</div>
-                <h3 className="font-display font-semibold text-sm md:text-base">{cat.name}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{t("categories.vendorCount", { count: cat.count })}</p>
+                <h3 className="font-display font-semibold text-sm md:text-base">{getCategoryName(cat.name)}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{t("home:categories.vendorCount", { count: cat.count })}</p>
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-0 translate-x-2">
                   <ArrowRight className="w-4 h-4 text-primary" />
                 </div>

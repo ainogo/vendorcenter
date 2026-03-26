@@ -49,7 +49,8 @@
     "title": "श्रेणीनुसार",
     "titleHighlight": "ब्राउझ करा",
     "subtitle": "तुमच्या गरजेनुसार योग्य सेवा शोधा",
-    "vendorCount": "{{count}} विक्रेते"
+    "vendorCount": "{{count}} विक्रेते",
+    "viewAll": "सर्व पहा"
   },
   "testimonials": {
     "titleStart": "आमचे",

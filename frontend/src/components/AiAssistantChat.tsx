@@ -86,20 +86,35 @@ async function queryAssistant(
   if (currentPage) body.currentPage = currentPage;
   if (lang) body.lang = lang;
 
-  const res = await fetch(`${API_BASE}/ai-assistant/query`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(localStorage.getItem("customer_accessToken")
-        ? { Authorization: `Bearer ${localStorage.getItem("customer_accessToken")}` }
-        : {}),
-    },
-    body: JSON.stringify(body),
-  });
+  const doFetch = async (): Promise<AssistantResponse> => {
+    const res = await fetch(`${API_BASE}/ai-assistant/query`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(localStorage.getItem("customer_accessToken")
+          ? { Authorization: `Bearer ${localStorage.getItem("customer_accessToken")}` }
+          : {}),
+      },
+      body: JSON.stringify(body),
+    });
 
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || "Request failed");
-  return json.data;
+    let json: Record<string, unknown>;
+    try {
+      json = await res.json();
+    } catch {
+      throw new Error("Server returned an invalid response");
+    }
+    if (!res.ok) throw new Error((json.error as string) || "Request failed");
+    return json.data as AssistantResponse;
+  };
+
+  try {
+    return await doFetch();
+  } catch (firstErr) {
+    // Single auto-retry after a brief pause for transient failures
+    await new Promise((r) => setTimeout(r, 1500));
+    return await doFetch();
+  }
 }
 
 async function clearConversation(conversationId: string): Promise<void> {

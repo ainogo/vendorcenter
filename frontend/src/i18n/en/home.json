@@ -49,7 +49,8 @@
     "title": "Browse by",
     "titleHighlight": "Category",
     "subtitle": "Find the perfect service for your needs",
-    "vendorCount": "{{count}} vendors"
+    "vendorCount": "{{count}} vendors",
+    "viewAll": "View All"
   },
   "testimonials": {
     "titleStart": "What Our",
