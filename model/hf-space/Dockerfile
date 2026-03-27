@@ -9,7 +9,9 @@ RUN git clone --depth 1 https://github.com/ggerganov/llama.cpp.git /llama.cpp
 
 WORKDIR /llama.cpp
 # Limit parallelism to -j2 to avoid OOMKilled on free-tier HF Spaces (16GB RAM)
-RUN cmake -B build -DGGML_CUDA=OFF -DLLAMA_SERVER=ON -DCMAKE_BUILD_TYPE=Release && \
+# Build static to avoid missing .so issues (libmtmd.so.0 etc.) in runtime stage
+RUN cmake -B build -DGGML_CUDA=OFF -DLLAMA_SERVER=ON -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=OFF && \
     cmake --build build --config Release --target llama-server -j2
 
 # Stage 2: Runtime
@@ -20,7 +22,11 @@ RUN apt-get update && \
     pip3 install --no-cache-dir huggingface_hub && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Copy binary + any shared libs it needs
 COPY --from=build /llama.cpp/build/bin/llama-server /usr/local/bin/llama-server
+COPY --from=build /llama.cpp/build/src /tmp/llama-libs/
+RUN find /tmp/llama-libs -name "*.so*" -exec cp {} /usr/local/lib/ \; 2>/dev/null; \
+    ldconfig; rm -rf /tmp/llama-libs
 
 # HuggingFace Spaces runs on port 7860
 ENV PORT=7860
