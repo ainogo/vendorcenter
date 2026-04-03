@@ -119,7 +119,9 @@ const Header = () => {
               }
             }}
           >
-            <img src="/logo.jpeg" alt="VendorCenter" className={`rounded-lg object-contain transition-all duration-300 ${scrolled ? "w-7 h-7" : "w-9 h-9"}`} />
+            <div className={`rounded-lg gradient-bg flex items-center justify-center transition-all duration-300 ${scrolled ? "w-7 h-7" : "w-9 h-9"}`}>
+              <span translate="no" className={`notranslate text-primary-foreground font-display font-bold transition-all duration-300 ${scrolled ? "text-sm" : "text-lg"}`}>{t("brandLogo")}</span>
+            </div>
             <span translate="no" className="notranslate font-display font-bold text-xl hidden sm:block">
               {t("brandName")}
             </span>

@@ -24,7 +24,9 @@ const VendorHeader = ({ showProfile = false, profilePicUrl }: VendorHeaderProps)
     <header className="border-b bg-card sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         <Link to="/dashboard" className="flex items-center gap-2">
-          <img src="/logo.jpeg" alt="VendorCenter" className="w-8 h-8 rounded-lg object-contain" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center">
+            <span translate="no" className="notranslate text-white font-bold text-sm">V</span>
+          </div>
           <span translate="no" className="notranslate font-bold text-lg hidden sm:block">
             Vendor<span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">Portal</span>
           </span>
