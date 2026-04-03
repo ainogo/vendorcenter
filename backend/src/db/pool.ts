@@ -31,7 +31,7 @@ export const pool = process.env.DATABASE_URL
       port: Number(process.env.DB_PORT ?? 5432),
       database: process.env.DB_NAME ?? "vendorcenter",
       user: process.env.DB_USER ?? "vendorcenter",
-      password: process.env.DB_PASSWORD ?? "change_me",
+      password: process.env.DB_PASSWORD ?? "",
       ...(isProduction ? { ssl: { rejectUnauthorized: false } } : {}),
       ...poolTimeouts,
     });

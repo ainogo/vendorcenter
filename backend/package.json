@@ -30,6 +30,7 @@
     "nodemailer": "^8.0.2",
     "pdfkit": "^0.17.2",
     "pg": "^8.13.1",
+    "xss": "^1.0.15",
     "zod": "^3.23.8"
   },
   "devDependencies": {

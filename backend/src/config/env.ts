@@ -68,6 +68,14 @@ export const env = {
 const DEFAULT_ACCESS_SECRET = "change_me_access";
 const DEFAULT_REFRESH_SECRET = "change_me_refresh";
 
+// Block startup with insecure default secrets in production
+if (env.nodeEnv === "production") {
+  if (env.jwtAccessSecret === DEFAULT_ACCESS_SECRET || env.jwtRefreshSecret === DEFAULT_REFRESH_SECRET) {
+    console.error("FATAL: JWT secrets must be set in production. Do not use default values.");
+    process.exit(1);
+  }
+}
+
 export function getSecurityConfigStatus() {
   const usingDefaultAccessSecret = env.jwtAccessSecret === DEFAULT_ACCESS_SECRET;
   const usingDefaultRefreshSecret = env.jwtRefreshSecret === DEFAULT_REFRESH_SECRET;

@@ -17,7 +17,6 @@ coverage/
 # Env
 .env
 .env.*
-!.env.example
 
 # Private local secrets vault (never commit)
 .private/

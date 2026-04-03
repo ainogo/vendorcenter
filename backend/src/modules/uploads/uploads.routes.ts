@@ -191,7 +191,8 @@ uploadsRouter.get("/my", requireRole(["customer", "vendor", "admin", "employee"]
 uploadsRouter.post("/file", uploadSingleLimiter, requireRole(["customer", "vendor", "admin", "employee"]), (req, res, next) => {
   upload.single("file")(req, res, (err) => {
     if (err) {
-      res.status(400).json({ success: false, error: err.message });
+      const safeMsg = err.code === "LIMIT_FILE_SIZE" ? "File too large (max 5MB)" : "File upload failed";
+      res.status(400).json({ success: false, error: safeMsg });
       return;
     }
     next();
@@ -222,7 +223,10 @@ uploadsRouter.post("/file", uploadSingleLimiter, requireRole(["customer", "vendo
 uploadsRouter.post("/files", uploadBatchLimiter, requireRole(["customer", "vendor", "admin", "employee"]), (req, res, next) => {
   upload.array("files", 6)(req, res, (err) => {
     if (err) {
-      res.status(400).json({ success: false, error: err.message });
+      const safeMsg = err.code === "LIMIT_FILE_SIZE" ? "File too large (max 5MB)"
+        : err.code === "LIMIT_FILE_COUNT" ? "Too many files (max 6)"
+        : "File upload failed";
+      res.status(400).json({ success: false, error: safeMsg });
       return;
     }
     next();

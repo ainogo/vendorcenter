@@ -23,6 +23,7 @@
     "lint": "echo \"Linting will be added with ESLint in next phase\""
   },
   "devDependencies": {
+    "marked": "^17.0.5",
     "vite": "^7.3.1"
   }
 }

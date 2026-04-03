@@ -24,6 +24,7 @@ import { aiAssistantRouter } from "./modules/ai-assistant/ai-assistant.routes.js
 
 import { dbState } from "./db/state.js";
 import { requestContext, requestLogger } from "./middleware/request-context.js";
+import { xssSanitize } from "./middleware/xss-sanitize.js";
 import { env } from "./config/env.js";
 
 export const app = express();
@@ -83,6 +84,9 @@ app.use(cors({
 // Body limits
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+// XSS sanitization on all incoming request data
+app.use(xssSanitize);
 
 
 // Global rate limiter
@@ -200,6 +204,25 @@ app.use("/api/maps", mapsRouter);
 app.use("/api/location", locationRouter);
 app.use("/api/email-test", emailTestRouter);
 app.use("/api/ai-assistant", aiLimiter, aiAssistantRouter);
+
+// API v1 aliases — forward-compatible versioned endpoints
+app.use("/api/v1/auth", authLimiter, authRouter);
+app.use("/api/v1/otp", authLimiter, otpRouter);
+app.use("/api/v1/zones", zonesRouter);
+app.use("/api/v1/vendors", vendorsRouter);
+app.use("/api/v1/services", servicesRouter);
+app.use("/api/v1/bookings", bookingsRouter);
+app.use("/api/v1/payments", paymentsRouter);
+app.use("/api/v1/notifications", notificationsRouter);
+app.use("/api/v1/activity", activityRouter);
+app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/employee", employeeRouter);
+app.use("/api/v1/analytics", analyticsRouter);
+app.use("/api/v1/reviews", reviewsRouter);
+app.use("/api/v1/uploads", uploadsRouter);
+app.use("/api/v1/maps", mapsRouter);
+app.use("/api/v1/location", locationRouter);
+app.use("/api/v1/ai-assistant", aiLimiter, aiAssistantRouter);
 
 
 // Global error handler

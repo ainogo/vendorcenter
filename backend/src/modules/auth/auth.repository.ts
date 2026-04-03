@@ -31,7 +31,7 @@ export async function findUserById(id: string) {
 
 export async function createUser(input: { email: string; role: AppRole; passwordHash: string; name?: string; phone?: string; businessName?: string }) {
   const result = await pool.query<DbUser>(
-    "INSERT INTO users (email, role, password_hash, name, phone, business_name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, role, password_hash, name, phone, business_name, verified",
+    "INSERT INTO users (email, role, password_hash, name, phone, business_name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, role, name, phone, business_name, verified",
     [input.email, input.role, input.passwordHash, input.name || null, input.phone || null, input.businessName || null]
   );
   return result.rows[0];
@@ -49,7 +49,7 @@ export async function updateUserProfile(id: string, input: { name?: string; phon
   const result = await pool.query<DbUser>(
     `UPDATE users SET name = COALESCE($2, name), phone = COALESCE($3, phone), profile_picture_url = COALESCE($4, profile_picture_url), updated_at = NOW()
      WHERE id = $1
-     RETURNING id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified`,
+     RETURNING id, email, role, name, phone, business_name, profile_picture_url, verified`,
     [id, input.name ?? null, input.phone ?? null, input.profilePictureUrl ?? null]
   );
   return result.rows[0] ?? null;

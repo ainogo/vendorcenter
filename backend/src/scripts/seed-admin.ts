@@ -10,7 +10,12 @@ import bcrypt from "bcryptjs";
 import { pool } from "../db/pool.js";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@vendorcenter.in";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "Admin@1234";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+if (!ADMIN_PASSWORD) {
+  console.error("ADMIN_PASSWORD env var is required. Do not use hardcoded passwords.");
+  process.exit(1);
+}
 
 async function seedAdmin() {
   const existing = await pool.query(
@@ -23,7 +28,7 @@ async function seedAdmin() {
     process.exit(0);
   }
 
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD!, 12);
   const result = await pool.query(
     `INSERT INTO users (email, role, password_hash, name, verified)
      VALUES ($1, 'admin', $2, 'Platform Admin', true)
@@ -33,7 +38,6 @@ async function seedAdmin() {
 
   console.log(`Admin user created successfully:`);
   console.log(`  Email:    ${ADMIN_EMAIL}`);
-  console.log(`  Password: ${ADMIN_PASSWORD}`);
   console.log(`  ID:       ${result.rows[0].id}`);
   process.exit(0);
 }
