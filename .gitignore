@@ -37,6 +37,9 @@ docs/
 # Training data generation progress (resume file)
 .gen-progress.json
 
+# Local-only model notebook
+model/notebooks/finetune_vendorcenter.ipynb
+
 # Screenshots / debug artifacts (not for repo)
 *.png
 hero-console-errors.txt
