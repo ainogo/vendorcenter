@@ -32,9 +32,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-lg gradient-bg flex items-center justify-center">
-                <span translate="no" className="notranslate text-primary-foreground font-display font-bold text-lg">{t("brandLogo")}</span>
-              </div>
+              <img src="/logo.jpeg" alt="VendorCenter" className="w-9 h-9 rounded-lg object-contain" />
               <span translate="no" className="notranslate font-display font-bold text-xl text-background">
                 {t("brandName")}
               </span>
