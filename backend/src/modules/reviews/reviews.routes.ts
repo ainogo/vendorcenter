@@ -10,6 +10,7 @@ reviewsRouter.get("/public", async (req, res) => {
   const parsed = z
     .object({
       limit: z.coerce.number().int().positive().max(12).default(3),
+      vendorId: z.string().optional(),
     })
     .safeParse(req.query);
 
@@ -18,7 +19,7 @@ reviewsRouter.get("/public", async (req, res) => {
     return;
   }
 
-  const reviews = await listRecentPublicReviews(parsed.data.limit);
+  const reviews = await listRecentPublicReviews(parsed.data.limit, parsed.data.vendorId);
   res.json({ success: true, data: reviews });
 });
 

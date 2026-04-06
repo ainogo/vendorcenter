@@ -3,16 +3,39 @@ CREATE EXTENSION IF NOT EXISTS "vector";
 
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE,
   role TEXT NOT NULL CHECK (role IN ('customer', 'vendor', 'admin', 'employee')),
-  password_hash TEXT NOT NULL,
+  password_hash TEXT,
   name TEXT,
   phone TEXT,
   business_name TEXT,
   profile_picture_url TEXT,
   verified BOOLEAN NOT NULL DEFAULT false,
+  firebase_uid TEXT UNIQUE,
+  phone_verified_at TIMESTAMPTZ,
+  email_verified_at TIMESTAMPTZ,
+  auth_provider TEXT NOT NULL DEFAULT 'email',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT users_phone_unique UNIQUE (phone)
+);
+
+CREATE TABLE IF NOT EXISTS user_roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('customer', 'vendor', 'admin', 'employee')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, role)
+);
+
+CREATE TABLE IF NOT EXISTS device_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL,
+  platform TEXT NOT NULL CHECK (platform IN ('web', 'android', 'ios')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, token)
 );
 
 CREATE TABLE IF NOT EXISTS auth_sessions (

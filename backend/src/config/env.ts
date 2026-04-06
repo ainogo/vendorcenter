@@ -63,6 +63,12 @@ export const env = {
 
   selfHostedLlmUrl: process.env.SELF_HOSTED_LLM_URL ?? "",
   selfHostedLlmModel: process.env.SELF_HOSTED_LLM_MODEL ?? "vendorcenter-3b",
+
+  // Firebase
+  firebaseProjectId: process.env.FIREBASE_PROJECT_ID ?? "",
+  firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL ?? "",
+  firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n"),
+  firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? "",
 };
 
 const DEFAULT_ACCESS_SECRET = "change_me_access";

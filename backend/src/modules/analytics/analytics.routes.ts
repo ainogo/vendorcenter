@@ -3,6 +3,7 @@ import { requireRole } from "../../middleware/auth.js";
 import { AuthRequest } from "../../middleware/auth.js";
 import { getBookingStats, getVendorBookingStats } from "../bookings/bookings.repository.js";
 import { countZones } from "../zones/zones.repository.js";
+import { getVendorRating } from "../reviews/reviews.repository.js";
 import { pool } from "../../db/pool.js";
 
 export const analyticsRouter = Router();
@@ -58,14 +59,29 @@ analyticsRouter.get("/public", async (_req, res, next) => {
 });
 
 analyticsRouter.get("/vendor", requireRole(["vendor"]), async (req: AuthRequest, res) => {
-  const ownBookings = await getVendorBookingStats(req.actor!.id);
+  const vendorId = req.actor!.id;
+  const [ownBookings, vendorRating] = await Promise.all([
+    getVendorBookingStats(vendorId),
+    getVendorRating(vendorId),
+  ]);
+
+  // Get vendor's top services
+  const servicesR = await pool.query<{ name: string }>(
+    `SELECT name FROM vendor_services WHERE vendor_id = $1 AND is_deleted = false AND availability = 'available' ORDER BY created_at DESC LIMIT 5`,
+    [vendorId]
+  );
+  const popularServices = servicesR.rows.map(r => r.name);
+
   res.json({
     success: true,
     data: {
       bookings: ownBookings,
       earningsEstimate: ownBookings * 1000,
-      ratings: { average: 4.6, count: 24 },
-      popularServices: ["Home Cleaning", "Appliance Repair"]
+      ratings: {
+        average: parseFloat(vendorRating.averageRating) || 0,
+        count: vendorRating.totalReviews || 0,
+      },
+      popularServices
     }
   });
 });

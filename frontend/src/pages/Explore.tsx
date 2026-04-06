@@ -162,7 +162,7 @@ export default function Explore() {
     <Layout>
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b bg-card relative overflow-hidden">
+      <div className="border-b bg-card relative z-20">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(120,119,198,0.06),transparent)]" />
         <div className="container mx-auto px-4 py-5 relative">
           <div className="flex items-center gap-3 mb-4">

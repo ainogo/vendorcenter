@@ -9,6 +9,8 @@ pnpm-debug.log*
 # Build
 dist/
 */dist/
+dist-company/
+*/dist-company/
 build/
 .next/
 coverage/
@@ -35,6 +37,14 @@ docs/
 
 # Training data generation progress (resume file)
 .gen-progress.json
+model/training-data/.chunk*
+model/training-data/.jsonl_b64*
+
+# Temp migration files
+backend/migrate-temp.ts
+
+# Jupyter notebooks (large, local-only)
+model/notebooks/*.ipynb
 
 # Screenshots / debug artifacts (not for repo)
 *.png
@@ -58,3 +68,18 @@ backend/uploads/
 
 # Reference project (not part of deployment)
 vendor-connect-30-main/
+platform-tools-latest-windows
+
+# Flutter / Mobile
+mobile/build/
+mobile/.dart_tool/
+mobile/.idea/
+mobile/*.iml
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/app/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.metadata
+mobile/pubspec.lock

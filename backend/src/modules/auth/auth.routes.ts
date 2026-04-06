@@ -2,10 +2,11 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { trackActivity } from "../activity/activity.service.js";
-import { createSession, createUser, findUserByEmail, findUserById, updatePassword, updateUserProfile } from "./auth.repository.js";
+import { createSession, createUser, createPhoneUser, findUserByEmail, findUserById, findUserByPhone, findUserByFirebaseUid, linkFirebaseUid, updatePassword, updateUserProfile, getUserRoles } from "./auth.repository.js";
 import { hashToken, signAccessToken, signRefreshToken, verifyRefreshToken } from "./token.service.js";
 import { requireRole, type AuthRequest } from "../../middleware/auth.js";
 import { findActiveSessionByTokenHash, revokeSessionById } from "./session.service.js";
+import { verifyFirebaseToken, isFirebaseConfigured } from "../../services/firebaseService.js";
 
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters")
@@ -82,14 +83,19 @@ authRouter.post("/login", async (req, res) => {
       return;
     }
 
+    if (!user.password_hash) {
+      res.status(401).json({ success: false, error: "This account uses phone login. Please sign in with your phone number." });
+      return;
+    }
+
     const passwordOk = await bcrypt.compare(parsed.data.password, user.password_hash);
     if (!passwordOk) {
       res.status(401).json({ success: false, error: "Invalid credentials" });
       return;
     }
 
-    const accessToken = signAccessToken({ userId: user.id, role: user.role, email: user.email });
-    const refreshToken = signRefreshToken({ userId: user.id, role: user.role, email: user.email });
+    const accessToken = signAccessToken({ userId: user.id, role: user.role, email: user.email ?? "" });
+    const refreshToken = signRefreshToken({ userId: user.id, role: user.role, email: user.email ?? "" });
 
     await createSession({
       userId: user.id,
@@ -283,5 +289,111 @@ authRouter.put("/profile", requireRole(["customer", "vendor", "admin", "employee
   } catch (err) {
     console.error("[auth] profile update error", err);
     res.status(500).json({ success: false, error: "Failed to update profile" });
+  }
+});
+
+// ─── Phone Auth (Firebase) ────────────────────────
+const phoneLoginSchema = z.object({
+  idToken: z.string().min(20, "Firebase ID token required"),
+  role: z.enum(["customer", "vendor"]).default("customer"),
+});
+
+authRouter.post("/phone-login", async (req, res) => {
+  try {
+    if (!isFirebaseConfigured()) {
+      res.status(503).json({ success: false, error: "Phone authentication is not configured" });
+      return;
+    }
+
+    const parsed = phoneLoginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: parsed.error.flatten() });
+      return;
+    }
+
+    // Verify Firebase ID token
+    let decoded;
+    try {
+      decoded = await verifyFirebaseToken(parsed.data.idToken);
+    } catch (err) {
+      console.error("[auth] Firebase token verification failed", err);
+      res.status(401).json({ success: false, error: "Invalid or expired phone verification" });
+      return;
+    }
+
+    const firebaseUid = decoded.uid;
+    const phoneNumber = decoded.phone_number;
+
+    if (!phoneNumber) {
+      res.status(400).json({ success: false, error: "No phone number in token" });
+      return;
+    }
+
+    // Normalize phone: Firebase returns "+919876543210", store as "9876543210"
+    const normalizedPhone = phoneNumber.replace(/^\+91/, "");
+
+    // Find existing user by Firebase UID first, then by phone
+    let user = await findUserByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      user = await findUserByPhone(normalizedPhone);
+
+      if (user) {
+        // Existing user with this phone but no Firebase UID — link them
+        await linkFirebaseUid(user.id, firebaseUid);
+      } else {
+        // New user — create with phone auth
+        user = await createPhoneUser({
+          phone: normalizedPhone,
+          firebaseUid,
+          role: parsed.data.role,
+        });
+
+        trackActivity({
+          actorId: user.id,
+          role: parsed.data.role,
+          action: "auth.phone_signup",
+          entity: "user",
+          metadata: { phone: normalizedPhone, provider: "firebase" },
+        });
+      }
+    }
+
+    // Issue our JWT tokens
+    const accessToken = signAccessToken({ userId: user.id, role: user.role, email: user.email ?? "" });
+    const refreshToken = signRefreshToken({ userId: user.id, role: user.role, email: user.email ?? "" });
+
+    await createSession({
+      userId: user.id,
+      refreshTokenHash: hashToken(refreshToken),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      userAgent: req.header("user-agent") ?? undefined,
+      ipAddress: req.ip,
+    });
+
+    const roles = await getUserRoles(user.id);
+
+    trackActivity({ actorId: user.id, role: user.role, action: "auth.phone_login", entity: "user" });
+
+    res.json({
+      success: true,
+      data: {
+        accessToken,
+        refreshToken,
+        actor: {
+          id: user.id,
+          role: user.role,
+          roles,
+          email: user.email,
+          verified: user.verified,
+          name: user.name,
+          phone: user.phone,
+          businessName: user.business_name,
+        },
+      },
+    });
+  } catch (err) {
+    console.error("[auth] phone-login error", err);
+    res.status(500).json({ success: false, error: "Phone login failed" });
   }
 });

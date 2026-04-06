@@ -85,6 +85,39 @@ const MIGRATIONS = [
   `ALTER TABLE ai_query_logs ENABLE ROW LEVEL SECURITY`,
   `ALTER TABLE service_category_embeddings ENABLE ROW LEVEL SECURITY`,
   `ALTER TABLE faq_embeddings ENABLE ROW LEVEL SECURITY`,
+  // Phone auth: make email/password nullable, add Firebase columns
+  `ALTER TABLE users ALTER COLUMN email DROP NOT NULL`,
+  `ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid TEXT`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT NOT NULL DEFAULT 'email'`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid) WHERE firebase_uid IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone) WHERE phone IS NOT NULL`,
+  // Multi-role support
+  `CREATE TABLE IF NOT EXISTS user_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('customer', 'vendor', 'admin', 'employee')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, role)
+  )`,
+  `INSERT INTO user_roles (user_id, role) SELECT id, role FROM users ON CONFLICT (user_id, role) DO NOTHING`,
+  // Device tokens for push notifications (FCM)
+  `CREATE TABLE IF NOT EXISTS device_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL,
+    platform TEXT NOT NULL CHECK (platform IN ('web', 'android', 'ios')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, token)
+  )`,
+  // OTP phone channel support
+  `ALTER TABLE otp_events ADD COLUMN IF NOT EXISTS phone TEXT`,
+  `ALTER TABLE otp_events ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'email'`,
+  `ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE device_tokens ENABLE ROW LEVEL SECURITY`,
 ];
 
 export async function initializeDatabase() {

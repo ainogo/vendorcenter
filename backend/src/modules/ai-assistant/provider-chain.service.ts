@@ -151,7 +151,7 @@ export function isAssistantAvailable(): boolean {
   const geminiCount = getGeminiApiKeys().length;
   const hasGroq = !!env.groqApiKey;
   const hasSelfHosted = !!env.selfHostedLlmUrl;
-  console.log(`[assistant-ai] Provider config: SelfHosted=${hasSelfHosted ? "yes" : "no"}, Groq=${hasGroq ? "yes (primary)" : "no"}, ${geminiCount} Gemini key(s) (fallback), model=${env.geminiModel}`);
+  console.log(`[assistant-ai] Provider config: SelfHosted=${hasSelfHosted ? "yes (primary)" : "no"}, Groq=${hasGroq ? "yes (secondary)" : "no"}, ${geminiCount} Gemini key(s) (fallback), model=${env.geminiModel}`);
   if (geminiCount === 0 && !hasGroq && !hasSelfHosted) {
     console.warn("[assistant-ai] WARNING: No AI provider keys configured — chatbot will return static fallbacks");
   }
@@ -606,8 +606,8 @@ export async function callAssistantModel(userMessage: string, history: Conversat
   const hasGeminiKeys = getGeminiApiKeys().length > 0;
   const hasSelfHosted = !!env.selfHostedLlmUrl;
 
-  // SELF-HOSTED LLM: use it first for structured/system requests, but avoid it for casual chat
-  if (!chatMode && hasSelfHosted) {
+  // SELF-HOSTED LLM (Qwen): always try first — our own model
+  if (hasSelfHosted) {
     try {
       const rawText = await callSelfHostedProvider(userMessage, history, chatMode, lang);
       const decision = normalizeResponse(rawText, "self-hosted" as any, chatMode);

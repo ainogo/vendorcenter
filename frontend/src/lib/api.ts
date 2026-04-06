@@ -158,6 +158,13 @@ export const api = {
       body: JSON.stringify({ otpId, code, purpose }),
     }),
 
+  // Phone auth (Firebase)
+  phoneLogin: (idToken: string, role: "customer" | "vendor" = "customer") =>
+    request<AuthResult & { actor: Actor & { roles?: string[] } }>("/auth/phone-login", {
+      method: "POST",
+      body: JSON.stringify({ idToken, role }),
+    }),
+
   // Services
   getServices: () => request<any[]>("/services"),
 

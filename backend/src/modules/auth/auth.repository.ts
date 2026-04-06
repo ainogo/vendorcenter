@@ -3,19 +3,21 @@ import { AppRole } from "../../shared/types.js";
 
 export interface DbUser {
   id: string;
-  email: string;
+  email: string | null;
   role: AppRole;
-  password_hash: string;
+  password_hash: string | null;
   name: string | null;
   phone: string | null;
   business_name: string | null;
   profile_picture_url: string | null;
   verified: boolean;
+  firebase_uid: string | null;
+  auth_provider: string;
 }
 
 export async function findUserByEmail(email: string) {
   const result = await pool.query<DbUser>(
-    "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified FROM users WHERE email = $1 LIMIT 1",
+    "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider FROM users WHERE email = $1 LIMIT 1",
     [email]
   );
   return result.rows[0] ?? null;
@@ -23,7 +25,7 @@ export async function findUserByEmail(email: string) {
 
 export async function findUserById(id: string) {
   const result = await pool.query<DbUser>(
-    "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified FROM users WHERE id = $1 LIMIT 1",
+    "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider FROM users WHERE id = $1 LIMIT 1",
     [id]
   );
   return result.rows[0] ?? null;
@@ -60,4 +62,60 @@ export async function createSession(input: { userId: string; refreshTokenHash: s
     "INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at, user_agent, ip_address) VALUES ($1, $2, $3, $4, $5)",
     [input.userId, input.refreshTokenHash, input.expiresAt, input.userAgent ?? null, input.ipAddress ?? null]
   );
+}
+
+// ─── Phone Auth ───────────────────────────────────
+
+export async function findUserByPhone(phone: string) {
+  const result = await pool.query<DbUser>(
+    "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider FROM users WHERE phone = $1 LIMIT 1",
+    [phone]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function findUserByFirebaseUid(firebaseUid: string) {
+  const result = await pool.query<DbUser>(
+    "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider FROM users WHERE firebase_uid = $1 LIMIT 1",
+    [firebaseUid]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function createPhoneUser(input: { phone: string; firebaseUid: string; role: AppRole; name?: string }) {
+  const result = await pool.query<DbUser>(
+    `INSERT INTO users (phone, firebase_uid, role, name, verified, auth_provider, phone_verified_at)
+     VALUES ($1, $2, $3, $4, true, 'phone', NOW())
+     RETURNING id, email, role, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider`,
+    [input.phone, input.firebaseUid, input.role, input.name || null]
+  );
+  const user = result.rows[0];
+  // Also insert into user_roles
+  await pool.query(
+    "INSERT INTO user_roles (user_id, role) VALUES ($1, $2) ON CONFLICT (user_id, role) DO NOTHING",
+    [user.id, input.role]
+  );
+  return user;
+}
+
+export async function linkFirebaseUid(userId: string, firebaseUid: string) {
+  await pool.query(
+    "UPDATE users SET firebase_uid = $2, auth_provider = 'phone', phone_verified_at = NOW(), updated_at = NOW() WHERE id = $1",
+    [userId, firebaseUid]
+  );
+}
+
+export async function addUserRole(userId: string, role: AppRole) {
+  await pool.query(
+    "INSERT INTO user_roles (user_id, role) VALUES ($1, $2) ON CONFLICT (user_id, role) DO NOTHING",
+    [userId, role]
+  );
+}
+
+export async function getUserRoles(userId: string): Promise<AppRole[]> {
+  const result = await pool.query<{ role: AppRole }>(
+    "SELECT role FROM user_roles WHERE user_id = $1",
+    [userId]
+  );
+  return result.rows.map(r => r.role);
 }

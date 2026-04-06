@@ -231,7 +231,7 @@ const Header = () => {
 
       {/* Category nav — hidden on /services page and collapsed on scroll */}
       {!isServicesPage && (
-        <div className={`hidden lg:block border-b border-border/30 transition-all duration-300 overflow-hidden ${scrolled ? "max-h-0 border-b-0" : "max-h-12"}`}>
+        <div className={`hidden lg:block border-b border-border/30 transition-all duration-300 ${scrolled ? "max-h-0 overflow-hidden border-b-0" : ""}`}>
         <div className="container">
           <nav className="flex items-center gap-6 h-10 overflow-visible">
             <Link

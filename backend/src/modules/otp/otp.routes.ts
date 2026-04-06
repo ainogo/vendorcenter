@@ -140,8 +140,8 @@ otpRouter.post("/verify", async (req, res) => {
 
     // For login purpose: issue tokens and return auth result
     if (otp.purpose === "login" && user) {
-      const accessToken = signAccessToken({ userId: user.id, role: user.role, email: user.email });
-      const refreshToken = signRefreshToken({ userId: user.id, role: user.role, email: user.email });
+      const accessToken = signAccessToken({ userId: user.id, role: user.role, email: user.email ?? "" });
+      const refreshToken = signRefreshToken({ userId: user.id, role: user.role, email: user.email ?? "" });
 
       await createSession({
         userId: user.id,

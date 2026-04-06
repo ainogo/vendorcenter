@@ -134,6 +134,12 @@ export const vendorApi = {
       body: JSON.stringify({ otpId, code, purpose }),
     }),
 
+  phoneLogin: (idToken: string) =>
+    request<AuthResult & { actor: Actor & { roles?: string[] } }>("/auth/phone-login", {
+      method: "POST",
+      body: JSON.stringify({ idToken, role: "vendor" }),
+    }),
+
   resetPassword: (payload: { email: string; otpId: string; code: string; newPassword: string }) =>
     request<{ reset: boolean }>("/auth/reset-password", {
       method: "POST",
