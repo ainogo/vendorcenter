@@ -292,6 +292,71 @@ authRouter.put("/profile", requireRole(["customer", "vendor", "admin", "employee
   }
 });
 
+// ─── Phone OTP Platform Gate (hard 9/day limit) ──
+// Firebase Blaze plan charges per SMS beyond 10/day free tier.
+// This gate ensures the ENTIRE platform never exceeds 9 SMS OTPs per day.
+// Quota resets at midnight Pacific Time (when Firebase resets).
+const DAILY_PHONE_OTP_LIMIT = 9;
+
+function getPacificDayBounds(): { start: Date; end: Date } {
+  // Get current time in America/Los_Angeles
+  const nowPT = new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
+  const ptDate = new Date(nowPT);
+  const startPT = new Date(ptDate);
+  startPT.setHours(0, 0, 0, 0);
+  const endPT = new Date(ptDate);
+  endPT.setHours(23, 59, 59, 999);
+
+  // Convert back to UTC for DB query
+  const offsetMs = new Date().getTime() - new Date(nowPT).getTime();
+  return {
+    start: new Date(startPT.getTime() + offsetMs),
+    end: new Date(endPT.getTime() + offsetMs),
+  };
+}
+
+authRouter.post("/phone-otp-gate", async (req, res) => {
+  try {
+    const { pool } = await import("../../db/pool.js");
+    const { start, end } = getPacificDayBounds();
+
+    const result = await pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM otp_events
+       WHERE channel = 'phone_sms' AND created_at >= $1 AND created_at <= $2`,
+      [start.toISOString(), end.toISOString()]
+    );
+
+    const used = parseInt(result.rows[0]?.count ?? "0", 10);
+    const remaining = Math.max(0, DAILY_PHONE_OTP_LIMIT - used);
+
+    if (used >= DAILY_PHONE_OTP_LIMIT) {
+      console.warn(`[otp-gate] BLOCKED — daily phone OTP limit reached (${used}/${DAILY_PHONE_OTP_LIMIT})`);
+      res.status(429).json({
+        success: false,
+        error: "Daily SMS verification limit reached. Please try again tomorrow.",
+        remaining: 0,
+        resetsAt: end.toISOString(),
+      });
+      return;
+    }
+
+    // Log this OTP request BEFORE the SMS is sent
+    const phone = typeof req.body?.phone === "string" ? req.body.phone.replace(/\D/g, "").slice(-10) : "unknown";
+    await pool.query(
+      `INSERT INTO otp_events (email, phone, purpose, code_hash, channel, expires_at, max_attempts)
+       VALUES ($1, $2, 'login', 'phone_gate', 'phone_sms', NOW() + INTERVAL '10 minutes', 1)`,
+      [`phone_${phone}@gate`, phone]
+    );
+
+    console.log(`[otp-gate] approved — ${used + 1}/${DAILY_PHONE_OTP_LIMIT} today`);
+    res.json({ success: true, remaining: remaining - 1 });
+  } catch (err) {
+    console.error("[otp-gate] error", err);
+    // FAIL CLOSED — if the gate errors, block the OTP to prevent billing
+    res.status(503).json({ success: false, error: "OTP service temporarily unavailable. Try again shortly." });
+  }
+});
+
 // ─── Phone Auth (Firebase) ────────────────────────
 const phoneLoginSchema = z.object({
   idToken: z.string().min(20, "Firebase ID token required"),
