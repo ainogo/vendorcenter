@@ -66,7 +66,14 @@ export async function createSession(input: { userId: string; refreshTokenHash: s
 
 // ─── Phone Auth ───────────────────────────────────
 
-export async function findUserByPhone(phone: string) {
+export async function findUserByPhone(phone: string, role?: AppRole) {
+  if (role) {
+    const result = await pool.query<DbUser>(
+      "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider FROM users WHERE phone = $1 AND role = $2 LIMIT 1",
+      [phone, role]
+    );
+    return result.rows[0] ?? null;
+  }
   const result = await pool.query<DbUser>(
     "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider FROM users WHERE phone = $1 LIMIT 1",
     [phone]
@@ -74,7 +81,14 @@ export async function findUserByPhone(phone: string) {
   return result.rows[0] ?? null;
 }
 
-export async function findUserByFirebaseUid(firebaseUid: string) {
+export async function findUserByFirebaseUid(firebaseUid: string, role?: AppRole) {
+  if (role) {
+    const result = await pool.query<DbUser>(
+      "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider FROM users WHERE firebase_uid = $1 AND role = $2 LIMIT 1",
+      [firebaseUid, role]
+    );
+    return result.rows[0] ?? null;
+  }
   const result = await pool.query<DbUser>(
     "SELECT id, email, role, password_hash, name, phone, business_name, profile_picture_url, verified, firebase_uid, auth_provider FROM users WHERE firebase_uid = $1 LIMIT 1",
     [firebaseUid]

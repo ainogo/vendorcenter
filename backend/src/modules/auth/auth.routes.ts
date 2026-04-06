@@ -7,6 +7,7 @@ import { hashToken, signAccessToken, signRefreshToken, verifyRefreshToken } from
 import { requireRole, type AuthRequest } from "../../middleware/auth.js";
 import { findActiveSessionByTokenHash, revokeSessionById } from "./session.service.js";
 import { verifyFirebaseToken, isFirebaseConfigured } from "../../services/firebaseService.js";
+import { AppRole } from "../../shared/types.js";
 
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters")
@@ -38,6 +39,15 @@ authRouter.post("/signup", async (req, res) => {
     if (existing) {
       res.status(409).json({ success: false, error: "User already exists" });
       return;
+    }
+
+    // Check phone uniqueness per role
+    if (parsed.data.phone) {
+      const phoneExists = await findUserByPhone(parsed.data.phone, parsed.data.role);
+      if (phoneExists) {
+        res.status(409).json({ success: false, error: "This phone number is already registered for this role" });
+        return;
+      }
     }
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
@@ -281,6 +291,15 @@ authRouter.put("/profile", requireRole(["customer", "vendor", "admin", "employee
     }).safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ success: false, error: parsed.error.flatten() }); return; }
 
+    // Check phone uniqueness per role before update
+    if (parsed.data.phone) {
+      const existing = await findUserByPhone(parsed.data.phone, req.actor!.role as AppRole);
+      if (existing && existing.id !== req.actor!.id) {
+        res.status(409).json({ success: false, error: "This phone number is already registered" });
+        return;
+      }
+    }
+
     const user = await updateUserProfile(req.actor!.id, parsed.data);
     if (!user) { res.status(404).json({ success: false, error: "User not found" }); return; }
 
@@ -396,27 +415,35 @@ authRouter.post("/phone-login", async (req, res) => {
 
     // Normalize phone: Firebase returns "+919876543210", store as "9876543210"
     const normalizedPhone = phoneNumber.replace(/^\+91/, "");
+    const requestedRole = parsed.data.role;
 
-    // Find existing user by Firebase UID first, then by phone
-    let user = await findUserByFirebaseUid(firebaseUid);
+    // Find existing user by Firebase UID (role-scoped), then by phone+role
+    let user = await findUserByFirebaseUid(firebaseUid, requestedRole);
 
     if (!user) {
-      user = await findUserByPhone(normalizedPhone);
+      user = await findUserByPhone(normalizedPhone, requestedRole);
 
       if (user) {
-        // Existing user with this phone but no Firebase UID — link them
+        // Existing user with this phone+role but no Firebase UID — link them
         await linkFirebaseUid(user.id, firebaseUid);
       } else {
+        // Check if phone is already taken for this role (prevent duplicates)
+        const existingForRole = await findUserByPhone(normalizedPhone, requestedRole);
+        if (existingForRole) {
+          res.status(409).json({ success: false, error: "An account with this phone number already exists for this role" });
+          return;
+        }
+
         // New user — create with phone auth
         user = await createPhoneUser({
           phone: normalizedPhone,
           firebaseUid,
-          role: parsed.data.role,
+          role: requestedRole,
         });
 
         trackActivity({
           actorId: user.id,
-          role: parsed.data.role,
+          role: requestedRole,
           action: "auth.phone_signup",
           entity: "user",
           metadata: { phone: normalizedPhone, provider: "firebase" },
