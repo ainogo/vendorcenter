@@ -234,7 +234,7 @@ const Login = () => {
 
   const handleSendEmailOtp = async () => {
     if (!email) {
-      toast.error(t("validation.fillAllFields"));
+      toast.error("Enter your email address to receive OTP");
       return;
     }
     setLoading(true);

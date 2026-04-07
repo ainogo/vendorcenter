@@ -41,27 +41,43 @@ async function autoSeedAdmin() {
 
   const adminEmail = process.env.ADMIN_EMAIL ?? "admin@vendorcenter.in";
   try {
+    // Check if any user with this email exists
     const existing = await pool.query(
-      "SELECT id FROM users WHERE email = $1 AND role = 'admin'",
+      "SELECT id, role, password_hash FROM users WHERE email = $1 LIMIT 1",
       [adminEmail]
     );
-    if (existing.rows.length > 0) return;
 
     const passwordHash = await bcrypt.hash(adminPassword, 12);
+
+    if (existing.rows.length > 0) {
+      const user = existing.rows[0];
+      // Ensure role is admin and password is current
+      await pool.query(
+        "UPDATE users SET role = 'admin', password_hash = $1, verified = true, suspended = false WHERE id = $2",
+        [passwordHash, user.id]
+      );
+      await pool.query(
+        "INSERT INTO user_roles (user_id, role) VALUES ($1, 'admin') ON CONFLICT (user_id, role) DO NOTHING",
+        [user.id]
+      );
+      console.log(`[admin-seed] ensured admin user: ${adminEmail} (id: ${user.id})`);
+      return;
+    }
+
+    // Create new admin
     const result = await pool.query(
       `INSERT INTO users (email, role, password_hash, name, verified)
        VALUES ($1, 'admin', $2, 'Platform Admin', true)
        RETURNING id`,
       [adminEmail, passwordHash]
     );
-    // Also insert into user_roles
     await pool.query(
-      `INSERT INTO user_roles (user_id, role) VALUES ($1, 'admin') ON CONFLICT (user_id, role) DO NOTHING`,
+      "INSERT INTO user_roles (user_id, role) VALUES ($1, 'admin') ON CONFLICT (user_id, role) DO NOTHING",
       [result.rows[0].id]
     );
     console.log(`[admin-seed] created admin user: ${adminEmail}`);
   } catch (err) {
-    console.warn(`[admin-seed] failed:`, (err as Error).message);
+    console.error(`[admin-seed] failed:`, (err as Error).message);
   }
 }
 
