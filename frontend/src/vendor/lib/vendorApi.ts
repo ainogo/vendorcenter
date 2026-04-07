@@ -144,7 +144,7 @@ export const vendorApi = {
   checkPhoneOtpGate: (phone: string) =>
     request<{ allowed: boolean }>("/auth/phone-otp-gate", {
       method: "POST",
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, role: "vendor" }),
     }),
 
   resetPassword: (payload: { email: string; otpId: string; code: string; newPassword: string }) =>

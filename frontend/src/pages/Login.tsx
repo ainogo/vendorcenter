@@ -151,8 +151,8 @@ const Login = () => {
     }
     setLoading(true);
     try {
-      // Billing gate: check daily SMS limit before sending OTP
-      const gateRes = await api.checkPhoneOtpGate(cleaned);
+      // Billing gate: check user exists + daily SMS limit before sending OTP
+      const gateRes = await api.checkPhoneOtpGate(cleaned, "customer");
       if (!gateRes.data?.allowed) {
         toast.error("Daily SMS limit reached. Please try again tomorrow.");
         return;
@@ -169,13 +169,15 @@ const Login = () => {
       goTo("phone-otp");
       toast.success(t("login.otpSentPhone"));
     } catch (err: any) {
-      console.error("Firebase phone OTP error:", err);
+      console.error("Phone OTP error:", err);
       if (err.code === "auth/too-many-requests") {
         toast.error(t("login.tooManyAttempts"));
-      } else {
+      } else if (err.code) {
         toast.error(t("login.phoneOtpFailed"));
+      } else {
+        // Gate API errors (user not found, limit reached, suspended)
+        toast.error(err.message || t("login.phoneOtpFailed"));
       }
-      // Reset reCAPTCHA on failure
       recaptchaVerifier.current = null;
     } finally {
       setLoading(false);

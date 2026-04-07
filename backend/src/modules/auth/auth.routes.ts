@@ -318,9 +318,10 @@ authRouter.put("/profile", requireRole(["customer", "vendor", "admin", "employee
 
 // ─── Phone OTP Platform Gate (hard 9/day limit) ──
 // Firebase Blaze plan charges per SMS beyond 10/day free tier.
-// This gate ensures the ENTIRE platform never exceeds 9 SMS OTPs per day.
+// Platform-wide safety cap + per-phone limit.
 // Quota resets at midnight Pacific Time (when Firebase resets).
-const DAILY_PHONE_OTP_LIMIT = 9;
+const DAILY_PLATFORM_OTP_LIMIT = 9;
+const DAILY_PER_PHONE_OTP_LIMIT = 3;
 
 function getPacificDayBounds(): { start: Date; end: Date } {
   // Get current time in America/Los_Angeles
@@ -344,20 +345,62 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
     const { pool } = await import("../../db/pool.js");
     const { start, end } = getPacificDayBounds();
 
-    const result = await pool.query<{ count: string }>(
+    const phone = typeof req.body?.phone === "string" ? req.body.phone.replace(/\D/g, "").slice(-10) : "";
+    const role = typeof req.body?.role === "string" && ["customer", "vendor"].includes(req.body.role) ? req.body.role : "customer";
+
+    if (!phone || phone.length !== 10) {
+      res.status(400).json({ success: false, error: "Valid 10-digit phone number required." });
+      return;
+    }
+
+    // Check if phone is registered for this role — if not, ask to register first
+    const userCheck = await pool.query(
+      "SELECT id, suspended FROM users WHERE phone = $1 AND role = $2 LIMIT 1",
+      [phone, role]
+    );
+    if (userCheck.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        error: "No account found with this phone number. Please register first.",
+        code: "USER_NOT_FOUND",
+      });
+      return;
+    }
+    if (userCheck.rows[0].suspended) {
+      res.status(403).json({ success: false, error: "Your account has been suspended. Contact support." });
+      return;
+    }
+
+    // Per-phone daily limit
+    const phoneResult = await pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM otp_events
+       WHERE channel = 'phone_sms' AND phone = $1 AND created_at >= $2 AND created_at <= $3`,
+      [phone, start.toISOString(), end.toISOString()]
+    );
+    const phoneUsed = parseInt(phoneResult.rows[0]?.count ?? "0", 10);
+    if (phoneUsed >= DAILY_PER_PHONE_OTP_LIMIT) {
+      console.warn(`[otp-gate] BLOCKED — per-phone limit for ${phone} (${phoneUsed}/${DAILY_PER_PHONE_OTP_LIMIT})`);
+      res.status(429).json({
+        success: false,
+        error: `OTP limit reached for this number (${DAILY_PER_PHONE_OTP_LIMIT}/day). Try again tomorrow.`,
+        remaining: 0,
+        resetsAt: end.toISOString(),
+      });
+      return;
+    }
+
+    // Platform-wide daily safety cap
+    const platformResult = await pool.query<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM otp_events
        WHERE channel = 'phone_sms' AND created_at >= $1 AND created_at <= $2`,
       [start.toISOString(), end.toISOString()]
     );
-
-    const used = parseInt(result.rows[0]?.count ?? "0", 10);
-    const remaining = Math.max(0, DAILY_PHONE_OTP_LIMIT - used);
-
-    if (used >= DAILY_PHONE_OTP_LIMIT) {
-      console.warn(`[otp-gate] BLOCKED — daily phone OTP limit reached (${used}/${DAILY_PHONE_OTP_LIMIT})`);
+    const platformUsed = parseInt(platformResult.rows[0]?.count ?? "0", 10);
+    if (platformUsed >= DAILY_PLATFORM_OTP_LIMIT) {
+      console.warn(`[otp-gate] BLOCKED — platform limit reached (${platformUsed}/${DAILY_PLATFORM_OTP_LIMIT})`);
       res.status(429).json({
         success: false,
-        error: "Daily SMS verification limit reached. Please try again tomorrow.",
+        error: "SMS service temporarily unavailable. Please try again later.",
         remaining: 0,
         resetsAt: end.toISOString(),
       });
@@ -365,15 +408,18 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
     }
 
     // Log this OTP request BEFORE the SMS is sent
-    const phone = typeof req.body?.phone === "string" ? req.body.phone.replace(/\D/g, "").slice(-10) : "unknown";
     await pool.query(
       `INSERT INTO otp_events (email, phone, purpose, code_hash, channel, expires_at, max_attempts)
        VALUES ($1, $2, 'login', 'phone_gate', 'phone_sms', NOW() + INTERVAL '10 minutes', 1)`,
       [`phone_${phone}@gate`, phone]
     );
 
-    console.log(`[otp-gate] approved — ${used + 1}/${DAILY_PHONE_OTP_LIMIT} today`);
-    res.json({ success: true, remaining: remaining - 1 });
+    const remaining = Math.min(
+      DAILY_PER_PHONE_OTP_LIMIT - phoneUsed - 1,
+      DAILY_PLATFORM_OTP_LIMIT - platformUsed - 1
+    );
+    console.log(`[otp-gate] approved — phone ${phone}: ${phoneUsed + 1}/${DAILY_PER_PHONE_OTP_LIMIT}, platform: ${platformUsed + 1}/${DAILY_PLATFORM_OTP_LIMIT}`);
+    res.json({ success: true, data: { allowed: true }, remaining });
   } catch (err) {
     console.error("[otp-gate] error", err);
     // FAIL CLOSED — if the gate errors, block the OTP to prevent billing

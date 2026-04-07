@@ -85,18 +85,26 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     setState(() { _loading = true; _error = null; });
 
-    // Platform-wide daily OTP gate — blocks if 9/day limit reached
+    // OTP gate — checks user exists + per-phone + platform limit
     try {
-      await ApiService().checkPhoneOtpGate(phone);
+      await ApiService().checkPhoneOtpGate(phone, role: 'customer');
     } catch (e) {
       if (mounted) {
+        String errorMsg;
+        if (e is DioException && e.response?.statusCode == 404) {
+          errorMsg = 'No account found with this number. Please register first.';
+        } else if (e is DioException && e.response?.statusCode == 429) {
+          errorMsg = e.response?.data?['error'] ?? 'OTP limit reached. Try again tomorrow.';
+        } else if (e is DioException && e.response?.statusCode == 403) {
+          errorMsg = 'Your account has been suspended. Contact support.';
+        } else if (e is DioException && e.response?.statusCode == 503) {
+          errorMsg = 'OTP service temporarily unavailable. Try again shortly.';
+        } else {
+          errorMsg = 'Unable to verify OTP availability. Try again.';
+        }
         setState(() {
           _loading = false;
-          _error = (e is DioException && e.response?.statusCode == 429)
-              ? 'Daily SMS limit reached. Please try again tomorrow.'
-              : (e is DioException && e.response?.statusCode == 503)
-                  ? 'OTP service temporarily unavailable. Try again shortly.'
-                  : 'Unable to verify OTP availability. Try again.';
+          _error = errorMsg;
         });
       }
       return;

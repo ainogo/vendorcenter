@@ -167,10 +167,10 @@ export const api = {
     }),
 
   // Phone OTP billing gate
-  checkPhoneOtpGate: (phone: string) =>
+  checkPhoneOtpGate: (phone: string, role: "customer" | "vendor" = "customer") =>
     request<{ allowed: boolean }>("/auth/phone-otp-gate", {
       method: "POST",
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, role }),
     }),
 
   // Services
