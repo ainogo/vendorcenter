@@ -35,6 +35,11 @@ docs/
 .mcp.json
 .playwright-mcp/
 
+# Firebase Hosting (local deploy artifact)
+firebase.json
+firebase-hosting/
+.firebase/
+
 # Training data generation progress (resume file)
 .gen-progress.json
 model/training-data/.chunk*

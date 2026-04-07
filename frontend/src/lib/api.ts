@@ -166,6 +166,13 @@ export const api = {
       body: JSON.stringify({ idToken, role }),
     }),
 
+  // Phone OTP billing gate
+  checkPhoneOtpGate: (phone: string) =>
+    request<{ allowed: boolean }>("/auth/phone-otp-gate", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    }),
+
   // Services
   getServices: () => request<any[]>("/services"),
 

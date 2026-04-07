@@ -1,0 +1,59 @@
+name: vendorcenter
+description: VendorCenter — Find trusted local service providers
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+  flutter: ^3.41.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  # Navigation
+  go_router: ^14.8.1
+  # State management
+  provider: ^6.1.2
+  # HTTP
+  dio: ^5.7.0
+  # Secure storage
+  flutter_secure_storage: ^9.2.4
+  # Firebase
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.7.0
+  firebase_messaging: ^15.2.4
+  firebase_app_check: ^0.3.2+10
+  # UI helpers
+  google_fonts: ^6.2.1
+  shimmer: ^3.0.0
+  cached_network_image: ^3.4.1
+  flutter_rating_bar: ^4.0.1
+  intl: ^0.19.0
+  # Icons
+  flutter_svg: ^2.0.17
+  # Local storage
+  shared_preferences: ^2.3.4
+  # Image picker
+  image_picker: ^1.1.2
+  # Permissions
+  permission_handler: ^11.3.1
+  # Location
+  geolocator: ^13.0.2
+  # Map
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  # URL launcher
+  url_launcher: ^6.3.1
+  # Share
+  share_plus: ^10.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

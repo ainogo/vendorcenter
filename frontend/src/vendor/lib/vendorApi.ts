@@ -141,6 +141,12 @@ export const vendorApi = {
       body: JSON.stringify({ idToken, role: "vendor" }),
     }),
 
+  checkPhoneOtpGate: (phone: string) =>
+    request<{ allowed: boolean }>("/auth/phone-otp-gate", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    }),
+
   resetPassword: (payload: { email: string; otpId: string; code: string; newPassword: string }) =>
     request<{ reset: boolean }>("/auth/reset-password", {
       method: "POST",

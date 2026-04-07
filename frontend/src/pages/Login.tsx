@@ -151,6 +151,12 @@ const Login = () => {
     }
     setLoading(true);
     try {
+      // Billing gate: check daily SMS limit before sending OTP
+      const gateRes = await api.checkPhoneOtpGate(cleaned);
+      if (!gateRes.data?.allowed) {
+        toast.error("Daily SMS limit reached. Please try again tomorrow.");
+        return;
+      }
       if (!recaptchaVerifier.current) {
         recaptchaVerifier.current = new RecaptchaVerifier(auth, recaptchaRef.current!, {
           size: "invisible",

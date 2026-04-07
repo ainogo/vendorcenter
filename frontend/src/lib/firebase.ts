@@ -3,7 +3,7 @@ import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationRes
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? "AIzaSyCiE25EsjcsZaV4DsVgQXx7H2kXX84Y11I",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "vendorcenter-staging.firebaseapp.com",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "auth.vendorcenter.in",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "vendorcenter-staging",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? "vendorcenter-staging.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? "570064694297",
