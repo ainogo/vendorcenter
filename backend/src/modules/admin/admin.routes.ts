@@ -7,7 +7,7 @@ import { trackActivity } from "../activity/activity.service.js";
 
 export const adminRouter = Router();
 
-adminRouter.get("/dashboard", requireRole(["admin"]), (_req, res) => {
+adminRouter.get("/dashboard", requireRole(["admin", "employee"]), (_req, res) => {
   res.json({
     success: true,
     data: {
@@ -17,7 +17,7 @@ adminRouter.get("/dashboard", requireRole(["admin"]), (_req, res) => {
 });
 
 // Live platform stats for dashboard cards
-adminRouter.get("/stats", requireRole(["admin"]), async (_req, res, next) => {
+adminRouter.get("/stats", requireRole(["admin", "employee"]), async (_req, res, next) => {
   try {
     const [usersR, vendorsR, bookingsR, pendingR, revenueR] = await Promise.all([
       pool.query("SELECT count(*)::int AS total FROM users WHERE role = 'customer'"),
@@ -75,7 +75,7 @@ adminRouter.get("/bookings", requireRole(["admin", "employee"]), async (_req, re
 });
 
 // Recent activity for admin dashboard
-adminRouter.get("/recent-activity", requireRole(["admin"]), async (_req, res, next) => {
+adminRouter.get("/recent-activity", requireRole(["admin", "employee"]), async (_req, res, next) => {
   try {
     const result = await pool.query(`
       SELECT id, actor_id, role, action, entity, metadata, created_at
@@ -301,5 +301,41 @@ adminRouter.patch("/bookings/:id/status", requireRole(["admin"]), async (req: Au
     });
 
     res.json({ success: true, data: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// ─── OTP events: view count + cleanup (admin only) ────────────────
+adminRouter.get("/otp-events", requireRole(["admin"]), async (_req, res, next) => {
+  try {
+    const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const countResult = await pool.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM otp_events WHERE channel = 'phone_sms' AND created_at >= $1",
+      [windowStart]
+    );
+    const totalResult = await pool.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM otp_events WHERE channel = 'phone_sms'"
+    );
+    res.json({
+      success: true,
+      data: {
+        last24h: parseInt(countResult.rows[0]?.count ?? "0", 10),
+        total: parseInt(totalResult.rows[0]?.count ?? "0", 10),
+        windowStart,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+adminRouter.delete("/otp-events", requireRole(["admin"]), async (req: AuthRequest, res, next) => {
+  try {
+    const result = await pool.query("DELETE FROM otp_events WHERE channel = 'phone_sms' RETURNING id");
+    trackActivity({
+      actorId: req.actor!.id,
+      role: "admin",
+      action: "admin.otp_events_cleared",
+      entity: "otp_events",
+      metadata: { deletedCount: result.rowCount },
+    });
+    res.json({ success: true, data: { deleted: result.rowCount } });
   } catch (err) { next(err); }
 });

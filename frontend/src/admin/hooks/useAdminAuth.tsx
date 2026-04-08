@@ -25,8 +25,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (payload: { email: string; password: string }) => {
     const res = await adminApi.login(payload);
     if (res.data) {
-      if (res.data.actor.role !== "admin") {
-        throw new Error("Access denied. Admin credentials required.");
+      if (!["admin", "employee"].includes(res.data.actor.role)) {
+        throw new Error("Access denied. Admin or employee credentials required.");
       }
       localStorage.setItem("adminAccessToken", res.data.accessToken);
       localStorage.setItem("adminRefreshToken", res.data.refreshToken);

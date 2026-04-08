@@ -88,7 +88,7 @@ export const adminApi = {
   login: (payload: { email: string; password: string }) =>
     request<AuthResult>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ ...payload, role: "admin" }),
+      body: JSON.stringify(payload),
     }),
 
   logout: () => {

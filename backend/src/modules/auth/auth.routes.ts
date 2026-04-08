@@ -87,7 +87,7 @@ authRouter.post("/signup", async (req, res) => {
 authRouter.post("/login", async (req, res) => {
   try {
     const parsed = z
-      .object({ email: z.string().email(), password: z.string().min(8), role: z.enum(["customer", "vendor", "admin"]).optional() })
+      .object({ email: z.string().email(), password: z.string().min(8), role: z.enum(["customer", "vendor", "admin", "employee"]).optional() })
       .safeParse(req.body);
 
     if (!parsed.success) {
