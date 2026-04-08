@@ -71,13 +71,16 @@ const Login = () => {
     return () => clearInterval(id);
   }, [countdown]);
 
-  // Init invisible reCAPTCHA
-  useEffect(() => {
-    if (!recaptchaRef.current || recaptchaVerifier.current) return;
-    recaptchaVerifier.current = new RecaptchaVerifier(auth, recaptchaRef.current, {
-      size: "invisible",
-      callback: () => {},
-    });
+  // Helper: clean up reCAPTCHA verifier + container
+  const clearRecaptcha = useCallback(() => {
+    if (recaptchaVerifier.current) {
+      try { recaptchaVerifier.current.clear(); } catch (_) {}
+      recaptchaVerifier.current = null;
+    }
+    // Remove any leftover reCAPTCHA widgets from the container
+    if (recaptchaRef.current) {
+      recaptchaRef.current.innerHTML = "";
+    }
   }, []);
 
   const goTo = useCallback((next: AuthStep, dir = 1) => {
@@ -157,28 +160,34 @@ const Login = () => {
         toast.error("Daily SMS limit reached. Please try again tomorrow.");
         return;
       }
-      if (!recaptchaVerifier.current) {
-        recaptchaVerifier.current = new RecaptchaVerifier(auth, recaptchaRef.current!, {
-          size: "invisible",
-          callback: () => {},
-        });
-      }
+
+      // Fresh reCAPTCHA verifier for each attempt
+      clearRecaptcha();
+      recaptchaVerifier.current = new RecaptchaVerifier(auth, recaptchaRef.current!, {
+        size: "invisible",
+        callback: () => {},
+      });
+
       const result = await signInWithPhoneNumber(auth, `+91${cleaned}`, recaptchaVerifier.current);
       setConfirmResult(result);
       setCountdown(RESEND_COOLDOWN);
+
+      // Track successful SMS send for billing gate
+      api.trackPhoneOtpSent(cleaned, "customer").catch(() => {});
+
       goTo("phone-otp");
       toast.success(t("login.otpSentPhone"));
     } catch (err: any) {
       console.error("Phone OTP error:", err);
+      clearRecaptcha();
       if (err.code === "auth/too-many-requests") {
         toast.error(t("login.tooManyAttempts"));
       } else if (err.code) {
-        toast.error(t("login.phoneOtpFailed"));
+        // Show actual Firebase error code for diagnosis
+        toast.error(`${t("login.phoneOtpFailed")} (${err.code})`);
       } else {
-        // Gate API errors (user not found, limit reached, suspended)
         toast.error(err.message || t("login.phoneOtpFailed"));
       }
-      recaptchaVerifier.current = null;
     } finally {
       setLoading(false);
     }
@@ -247,7 +256,7 @@ const Login = () => {
     }
     setLoading(true);
     try {
-      const res = await api.requestOtp(email, "login");
+      const res = await api.requestOtp(email, "login", "customer");
       if (res.data) {
         setEmailOtpId(res.data.otpId);
         setEmailOtpSent(true);

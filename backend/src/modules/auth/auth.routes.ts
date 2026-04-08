@@ -370,10 +370,10 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
       return;
     }
 
-    // Per-phone daily limit
+    // Per-phone daily limit — only count confirmed SMS sends
     const phoneResult = await pool.query<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM otp_events
-       WHERE channel = 'phone_sms' AND phone = $1 AND created_at >= $2`,
+       WHERE channel = 'phone_sms' AND code_hash = 'phone_sms_sent' AND phone = $1 AND created_at >= $2`,
       [phone, windowStart]
     );
     const phoneUsed = parseInt(phoneResult.rows[0]?.count ?? "0", 10);
@@ -387,10 +387,10 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
       return;
     }
 
-    // Platform-wide daily safety cap
+    // Platform-wide daily safety cap — only count confirmed SMS sends
     const platformResult = await pool.query<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM otp_events
-       WHERE channel = 'phone_sms' AND created_at >= $1`,
+       WHERE channel = 'phone_sms' AND code_hash = 'phone_sms_sent' AND created_at >= $1`,
       [windowStart]
     );
     const platformUsed = parseInt(platformResult.rows[0]?.count ?? "0", 10);
@@ -404,23 +404,45 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
       return;
     }
 
-    // Log this OTP request BEFORE the SMS is sent
-    await pool.query(
-      `INSERT INTO otp_events (email, phone, purpose, code_hash, channel, expires_at, max_attempts)
-       VALUES ($1, $2, 'login', 'phone_gate', 'phone_sms', NOW() + INTERVAL '10 minutes', 1)`,
-      [`phone_${phone}@gate`, phone]
-    );
+    // Don't insert here — quota is tracked when frontend confirms SMS was sent
+    // This prevents burning quota on reCAPTCHA/Firebase failures
 
     const remaining = Math.min(
-      DAILY_PER_PHONE_OTP_LIMIT - phoneUsed - 1,
-      DAILY_PLATFORM_OTP_LIMIT - platformUsed - 1
+      DAILY_PER_PHONE_OTP_LIMIT - phoneUsed,
+      DAILY_PLATFORM_OTP_LIMIT - platformUsed
     );
-    console.log(`[otp-gate] approved — phone ${phone}: ${phoneUsed + 1}/${DAILY_PER_PHONE_OTP_LIMIT}, platform: ${platformUsed + 1}/${DAILY_PLATFORM_OTP_LIMIT}`);
+    console.log(`[otp-gate] approved — phone ${phone}: ${phoneUsed}/${DAILY_PER_PHONE_OTP_LIMIT}, platform: ${platformUsed}/${DAILY_PLATFORM_OTP_LIMIT}`);
     res.json({ success: true, data: { allowed: true }, remaining });
   } catch (err) {
     console.error("[otp-gate] error", err);
     // FAIL CLOSED — if the gate errors, block the OTP to prevent billing
     res.status(503).json({ success: false, error: "OTP service temporarily unavailable. Try again shortly." });
+  }
+});
+
+// Track actual SMS send — called by frontend after Firebase sends OTP successfully
+authRouter.post("/phone-otp-track", async (req, res) => {
+  try {
+    const { pool } = await import("../../db/pool.js");
+    const phone = typeof req.body?.phone === "string" ? req.body.phone.replace(/\D/g, "").slice(-10) : "";
+    const role = typeof req.body?.role === "string" && ["customer", "vendor"].includes(req.body.role) ? req.body.role : "customer";
+
+    if (!phone || phone.length !== 10) {
+      res.status(400).json({ success: false, error: "Valid phone required." });
+      return;
+    }
+
+    await pool.query(
+      `INSERT INTO otp_events (email, phone, purpose, code_hash, channel, expires_at, max_attempts)
+       VALUES ($1, $2, 'login', 'phone_sms_sent', 'phone_sms', NOW() + INTERVAL '10 minutes', 1)`,
+      [`phone_${phone}@${role}`, phone]
+    );
+
+    console.log(`[otp-track] SMS sent recorded — phone ${phone}, role ${role}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[otp-track] error", err);
+    res.json({ success: true }); // Non-critical — don't block user flow
   }
 });
 

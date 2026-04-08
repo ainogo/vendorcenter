@@ -24,10 +24,27 @@ export const otpRouter = Router();
 
 otpRouter.post("/request", async (req, res) => {
   try {
-    const parsed = z.object({ email: z.string().email(), purpose: purposeSchema }).safeParse(req.body);
+    const parsed = z.object({
+      email: z.string().email(),
+      purpose: purposeSchema,
+      role: z.enum(["customer", "vendor", "admin", "employee"]).optional(),
+    }).safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ success: false, error: parsed.error.flatten() });
       return;
+    }
+
+    // For login purpose, verify the email is registered for the given role
+    if (parsed.data.purpose === "login") {
+      const user = await findUserByEmail(parsed.data.email, parsed.data.role);
+      if (!user) {
+        res.status(404).json({ success: false, error: "No account found with this email. Please register first." });
+        return;
+      }
+      if (user.suspended) {
+        res.status(403).json({ success: false, error: "This account has been suspended." });
+        return;
+      }
     }
 
     const code = randomOtp(env.otpLength);
@@ -139,7 +156,11 @@ otpRouter.post("/verify", async (req, res) => {
     });
 
     // For login purpose: issue tokens and return auth result
-    if (otp.purpose === "login" && user) {
+    if (otp.purpose === "login") {
+      if (!user) {
+        res.status(404).json({ success: false, error: "No account found with this email. Please register first." });
+        return;
+      }
       const accessToken = signAccessToken({ userId: user.id, role: user.role, email: user.email ?? "" });
       const refreshToken = signRefreshToken({ userId: user.id, role: user.role, email: user.email ?? "" });
 

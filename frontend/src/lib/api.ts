@@ -148,10 +148,10 @@ export const api = {
   },
 
   // OTP
-  requestOtp: (email: string, purpose: string) =>
+  requestOtp: (email: string, purpose: string, role?: string) =>
     request<{ otpId: string; expiresInMinutes: number; otpCodeForDev?: string }>(
       "/otp/request",
-      { method: "POST", body: JSON.stringify({ email, purpose }) }
+      { method: "POST", body: JSON.stringify({ email, purpose, ...(role && { role }) }) }
     ),
 
   verifyOtp: (otpId: string, code: string, purpose: string) =>
@@ -170,6 +170,13 @@ export const api = {
   // Phone OTP billing gate
   checkPhoneOtpGate: (phone: string, role: "customer" | "vendor" = "customer") =>
     request<{ allowed: boolean }>("/auth/phone-otp-gate", {
+      method: "POST",
+      body: JSON.stringify({ phone, role }),
+    }),
+
+  // Track successful SMS send for billing gate
+  trackPhoneOtpSent: (phone: string, role: "customer" | "vendor" = "customer") =>
+    request("/auth/phone-otp-track", {
       method: "POST",
       body: JSON.stringify({ phone, role }),
     }),

@@ -124,10 +124,10 @@ export const vendorApi = {
     });
   },
 
-  requestOtp: (email: string, purpose: string) =>
+  requestOtp: (email: string, purpose: string, role?: string) =>
     request<{ otpId: string; expiresInMinutes: number }>("/otp/request", {
       method: "POST",
-      body: JSON.stringify({ email, purpose }),
+      body: JSON.stringify({ email, purpose, ...(role && { role }) }),
     }),
 
   verifyOtp: (otpId: string, code: string, purpose: string) =>
@@ -144,6 +144,12 @@ export const vendorApi = {
 
   checkPhoneOtpGate: (phone: string) =>
     request<{ allowed: boolean }>("/auth/phone-otp-gate", {
+      method: "POST",
+      body: JSON.stringify({ phone, role: "vendor" }),
+    }),
+
+  trackPhoneOtpSent: (phone: string) =>
+    request("/auth/phone-otp-track", {
       method: "POST",
       body: JSON.stringify({ phone, role: "vendor" }),
     }),
