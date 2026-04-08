@@ -148,6 +148,24 @@ app.get("/health", (_req: Request, res: Response) => {
   });
 });
 
+// Firebase Admin SDK health check
+app.get("/health/firebase", async (_req: Request, res: Response) => {
+  try {
+    const { isFirebaseConfigured, getFirebaseAuth } = await import("./services/firebaseService.js");
+    const configured = isFirebaseConfigured();
+    if (!configured) {
+      res.json({ success: true, data: { configured: false, status: "not_configured", message: "Missing FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, or FIREBASE_PRIVATE_KEY" } });
+      return;
+    }
+    // Try to initialize and list users (limit 1) to verify credentials
+    const auth = getFirebaseAuth();
+    await auth.listUsers(1);
+    res.json({ success: true, data: { configured: true, status: "ok", message: "Firebase Admin SDK verified" } });
+  } catch (err: any) {
+    res.json({ success: true, data: { configured: true, status: "error", message: err.message || "Firebase init failed" } });
+  }
+});
+
 // Root route for platform default health checks (some providers probe "/")
 app.get("/", (_req: Request, res: Response) => {
   res.json({

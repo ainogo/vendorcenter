@@ -1,4 +1,4 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { trackActivity } from "../activity/activity.service.js";
@@ -284,7 +284,7 @@ authRouter.post("/reset-password", async (req, res) => {
   }
 });
 
-// â”€â”€â”€ Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Profile ──────────────────────────────────────
 authRouter.get("/profile", requireRole(["customer", "vendor", "admin", "employee"]), async (req: AuthRequest, res) => {
   try {
     const user = await findUserById(req.actor!.id);
@@ -325,34 +325,24 @@ authRouter.put("/profile", requireRole(["customer", "vendor", "admin", "employee
   }
 });
 
-// â”€â”€â”€ Phone OTP Platform Gate (hard 9/day limit) â”€â”€
+// ─── Phone OTP Platform Gate (hard 9/day limit) ──
 // Firebase Blaze plan charges per SMS beyond 10/day free tier.
 // Platform-wide safety cap + per-phone limit.
 // Quota resets at midnight Pacific Time (when Firebase resets).
 const DAILY_PLATFORM_OTP_LIMIT = 9;
 const DAILY_PER_PHONE_OTP_LIMIT = 3;
 
-function getPacificDayBounds(): { start: Date; end: Date } {
-  // Get current time in America/Los_Angeles
-  const nowPT = new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
-  const ptDate = new Date(nowPT);
-  const startPT = new Date(ptDate);
-  startPT.setHours(0, 0, 0, 0);
-  const endPT = new Date(ptDate);
-  endPT.setHours(23, 59, 59, 999);
-
-  // Convert back to UTC for DB query
-  const offsetMs = new Date().getTime() - new Date(nowPT).getTime();
-  return {
-    start: new Date(startPT.getTime() + offsetMs),
-    end: new Date(endPT.getTime() + offsetMs),
-  };
+/** Rolling 24-hour window for OTP counting.
+ *  More conservative than midnight-reset (better billing protection)
+ *  and eliminates fragile Pacific timezone calculations. */
+function getOtpWindowStart(): string {
+  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 }
 
 authRouter.post("/phone-otp-gate", async (req, res) => {
   try {
     const { pool } = await import("../../db/pool.js");
-    const { start, end } = getPacificDayBounds();
+    const windowStart = getOtpWindowStart();
 
     const phone = typeof req.body?.phone === "string" ? req.body.phone.replace(/\D/g, "").slice(-10) : "";
     const role = typeof req.body?.role === "string" && ["customer", "vendor"].includes(req.body.role) ? req.body.role : "customer";
@@ -362,7 +352,7 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
       return;
     }
 
-    // Check if phone is registered for this role â€” if not, ask to register first
+    // Check if phone is registered for this role — if not, ask to register first
     const userCheck = await pool.query(
       "SELECT id, suspended FROM users WHERE phone = $1 AND role = $2 LIMIT 1",
       [phone, role]
@@ -383,17 +373,16 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
     // Per-phone daily limit
     const phoneResult = await pool.query<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM otp_events
-       WHERE channel = 'phone_sms' AND phone = $1 AND created_at >= $2 AND created_at <= $3`,
-      [phone, start.toISOString(), end.toISOString()]
+       WHERE channel = 'phone_sms' AND phone = $1 AND created_at >= $2`,
+      [phone, windowStart]
     );
     const phoneUsed = parseInt(phoneResult.rows[0]?.count ?? "0", 10);
     if (phoneUsed >= DAILY_PER_PHONE_OTP_LIMIT) {
-      console.warn(`[otp-gate] BLOCKED â€” per-phone limit for ${phone} (${phoneUsed}/${DAILY_PER_PHONE_OTP_LIMIT})`);
+      console.warn(`[otp-gate] BLOCKED — per-phone limit for ${phone} (${phoneUsed}/${DAILY_PER_PHONE_OTP_LIMIT})`);
       res.status(429).json({
         success: false,
-        error: `OTP limit reached for this number (${DAILY_PER_PHONE_OTP_LIMIT}/day). Try again tomorrow.`,
+        error: `OTP limit reached for this number (${DAILY_PER_PHONE_OTP_LIMIT}/day). Try again later.`,
         remaining: 0,
-        resetsAt: end.toISOString(),
       });
       return;
     }
@@ -401,17 +390,16 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
     // Platform-wide daily safety cap
     const platformResult = await pool.query<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM otp_events
-       WHERE channel = 'phone_sms' AND created_at >= $1 AND created_at <= $2`,
-      [start.toISOString(), end.toISOString()]
+       WHERE channel = 'phone_sms' AND created_at >= $1`,
+      [windowStart]
     );
     const platformUsed = parseInt(platformResult.rows[0]?.count ?? "0", 10);
     if (platformUsed >= DAILY_PLATFORM_OTP_LIMIT) {
-      console.warn(`[otp-gate] BLOCKED â€” platform limit reached (${platformUsed}/${DAILY_PLATFORM_OTP_LIMIT})`);
+      console.warn(`[otp-gate] BLOCKED — platform limit reached (${platformUsed}/${DAILY_PLATFORM_OTP_LIMIT})`);
       res.status(429).json({
         success: false,
         error: "SMS service temporarily unavailable. Please try again later.",
         remaining: 0,
-        resetsAt: end.toISOString(),
       });
       return;
     }
@@ -427,16 +415,16 @@ authRouter.post("/phone-otp-gate", async (req, res) => {
       DAILY_PER_PHONE_OTP_LIMIT - phoneUsed - 1,
       DAILY_PLATFORM_OTP_LIMIT - platformUsed - 1
     );
-    console.log(`[otp-gate] approved â€” phone ${phone}: ${phoneUsed + 1}/${DAILY_PER_PHONE_OTP_LIMIT}, platform: ${platformUsed + 1}/${DAILY_PLATFORM_OTP_LIMIT}`);
+    console.log(`[otp-gate] approved — phone ${phone}: ${phoneUsed + 1}/${DAILY_PER_PHONE_OTP_LIMIT}, platform: ${platformUsed + 1}/${DAILY_PLATFORM_OTP_LIMIT}`);
     res.json({ success: true, data: { allowed: true }, remaining });
   } catch (err) {
     console.error("[otp-gate] error", err);
-    // FAIL CLOSED â€” if the gate errors, block the OTP to prevent billing
+    // FAIL CLOSED — if the gate errors, block the OTP to prevent billing
     res.status(503).json({ success: false, error: "OTP service temporarily unavailable. Try again shortly." });
   }
 });
 
-// â”€â”€â”€ Phone Auth (Firebase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Phone Auth (Firebase) ────────────────────────
 const phoneLoginSchema = z.object({
   idToken: z.string().min(20, "Firebase ID token required"),
   role: z.enum(["customer", "vendor"]).default("customer"),
@@ -459,9 +447,10 @@ authRouter.post("/phone-login", async (req, res) => {
     let decoded;
     try {
       decoded = await verifyFirebaseToken(parsed.data.idToken);
-    } catch (err) {
-      console.error("[auth] Firebase token verification failed", err);
-      res.status(401).json({ success: false, error: "Invalid or expired phone verification" });
+    } catch (err: any) {
+      const errMsg = err?.message || "Unknown error";
+      console.error("[auth] Firebase token verification failed:", errMsg);
+      res.status(401).json({ success: false, error: `Phone verification failed: ${errMsg}` });
       return;
     }
 
@@ -484,7 +473,7 @@ authRouter.post("/phone-login", async (req, res) => {
       user = await findUserByPhone(normalizedPhone, requestedRole);
 
       if (user) {
-        // Existing user with this phone+role but no Firebase UID â€” link them
+        // Existing user with this phone+role but no Firebase UID — link them
         await linkFirebaseUid(user.id, firebaseUid);
       } else {
         // Check if phone is already taken for this role (prevent duplicates)
@@ -494,7 +483,7 @@ authRouter.post("/phone-login", async (req, res) => {
           return;
         }
 
-        // New user â€” create with phone auth
+        // New user — create with phone auth
         user = await createPhoneUser({
           phone: normalizedPhone,
           firebaseUid,

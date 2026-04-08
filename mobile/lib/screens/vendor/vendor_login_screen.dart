@@ -364,14 +364,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
       await auth.phoneLogin(idToken, role: 'vendor');
     } catch (e) {
       if (mounted) {
-        final s = e.toString().toLowerCase();
-        String msg = 'Login failed. Please try again.';
-        if (s.contains('billing') || s.contains('quota')) {
-          msg = 'SMS service temporarily unavailable. Please use email login.';
-        } else if (s.contains('network') || s.contains('connection')) {
-          msg = 'Network error. Please check your internet.';
-        }
-        setState(() { _loading = false; _error = msg; });
+        setState(() { _loading = false; _error = _friendlyError(e); });
       }
     }
   }
