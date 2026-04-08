@@ -73,6 +73,11 @@ export const env = {
     key = key.replace(/^["']|["']$/g, "");
     // Replace escaped newlines (literal \n) with real newlines
     key = key.replace(/\\n/g, "\n");
+    // If PEM header is missing, wrap the base64 body in proper PEM format
+    if (key.trim() && !key.includes("-----BEGIN")) {
+      const body = key.replace(/\s+/g, "").replace(/(.{64})/g, "$1\n").trim();
+      key = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
+    }
     return key;
   })(),
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? "",
