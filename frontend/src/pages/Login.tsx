@@ -63,6 +63,7 @@ const Login = () => {
   // Shared
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Countdown timer
   useEffect(() => {
@@ -108,6 +109,14 @@ const Login = () => {
 
   const routeByRole = (result: { accessToken: string; refreshToken: string; actor: { role: string } }) => {
     const role = result.actor.role;
+    // Remember me: if unchecked, set session-only marker so tokens are cleared on browser restart
+    if (!rememberMe) {
+      sessionStorage.setItem("customer_session_only", "1");
+      localStorage.removeItem("customer_remember_me");
+    } else {
+      sessionStorage.removeItem("customer_session_only");
+      localStorage.setItem("customer_remember_me", "1");
+    }
     if (role === "customer") {
       clearVendorSession();
       clearAdminSession();
@@ -490,7 +499,7 @@ const Login = () => {
 
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="rounded border-border" />
+            <input type="checkbox" className="rounded border-border" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
             <span className="text-muted-foreground">{t("login.rememberMe")}</span>
           </label>
           <Link to="/forgot-password" className="text-primary hover:underline font-medium">
@@ -631,6 +640,16 @@ const Login = () => {
               {t("login.signUp")}
             </Link>
           </p>
+
+          {/* Vendor login link */}
+          <div className="mt-4 pt-4 border-t border-border/40">
+            <p className="text-center text-sm text-muted-foreground">
+              Are you a service provider?{" "}
+              <a href="/vendor/login" className="text-primary hover:underline font-medium">
+                Sign in as Vendor →
+              </a>
+            </p>
+          </div>
         </motion.div>
       </div>
 

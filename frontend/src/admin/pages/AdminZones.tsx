@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Shield, LogOut, ArrowLeft, Search, Plus, MapPin } from "lucide-react";
+import { Shield, LogOut, ArrowLeft, Search, Plus, MapPin, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,23 +15,36 @@ interface Zone {
   state: string;
   city: string;
   zone: string;
-  active?: boolean;
+  pincode?: string | null;
+  active: boolean;
   createdAt: string;
 }
 
 const AdminZones = () => {
-  const { user, logout, loading } = useAdminAuth();
+  const { user, logout, loading, hasPermission } = useAdminAuth();
   const navigate = useNavigate();
   const [zones, setZones] = useState<Zone[]>([]);
   const [search, setSearch] = useState("");
   const [fetching, setFetching] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ country: "India", state: "", city: "", zone: "" });
+  const [form, setForm] = useState({ country: "India", state: "", city: "", zone: "", pincode: "" });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/login");
   }, [user, loading, navigate]);
+
+  if (!loading && user && !hasPermission("zones.manage")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-4">You don't have permission to view this page.</p>
+          <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
 
   const fetchZones = () => {
     setFetching(true);
@@ -49,10 +62,12 @@ const AdminZones = () => {
     if (!form.state.trim() || !form.city.trim() || !form.zone.trim()) return;
     setSubmitting(true);
     try {
-      const res = await adminApi.createZone(form);
+      const payload: any = { country: form.country, state: form.state, city: form.city, zone: form.zone };
+      if (form.pincode.trim()) payload.pincode = form.pincode.trim();
+      const res = await adminApi.createZone(payload);
       if (res.data) {
         setZones(prev => [...prev, res.data!]);
-        setForm({ country: "India", state: "", city: "", zone: "" });
+        setForm({ country: "India", state: "", city: "", zone: "", pincode: "" });
         setShowForm(false);
       }
     } catch {
@@ -62,12 +77,21 @@ const AdminZones = () => {
     }
   };
 
+  const handleToggle = async (zoneId: string) => {
+    try {
+      const res = await adminApi.toggleZone(zoneId);
+      if (res.data) {
+        setZones(prev => prev.map(z => z.id === zoneId ? res.data! : z));
+      }
+    } catch { /* ignore */ }
+  };
+
   if (loading || !user) return null;
 
   const filtered = zones.filter(z => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return z.zone.toLowerCase().includes(q) || z.city.toLowerCase().includes(q) || z.state.toLowerCase().includes(q);
+    return z.zone.toLowerCase().includes(q) || z.city.toLowerCase().includes(q) || z.state.toLowerCase().includes(q) || (z.pincode || "").includes(q);
   });
 
   const grouped = filtered.reduce<Record<string, Zone[]>>((acc, z) => {
@@ -91,9 +115,9 @@ const AdminZones = () => {
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground">Dashboard</Link>
-            <Link to="/vendors" className="text-sm font-medium text-muted-foreground hover:text-foreground">Vendors</Link>
-            <Link to="/users" className="text-sm font-medium text-muted-foreground hover:text-foreground">Users</Link>
-            <Link to="/bookings" className="text-sm font-medium text-muted-foreground hover:text-foreground">Bookings</Link>
+            {hasPermission("vendors.view") && <Link to="/vendors" className="text-sm font-medium text-muted-foreground hover:text-foreground">Vendors</Link>}
+            {hasPermission("users.view") && <Link to="/users" className="text-sm font-medium text-muted-foreground hover:text-foreground">Users</Link>}
+            {hasPermission("bookings.view") && <Link to="/bookings" className="text-sm font-medium text-muted-foreground hover:text-foreground">Bookings</Link>}
             <Link to="/zones" className="text-sm font-medium text-foreground">Zones</Link>
           </nav>
           <div className="flex items-center gap-4">
@@ -125,11 +149,12 @@ const AdminZones = () => {
           <Card className="mb-6">
             <CardContent className="pt-6">
               <h3 className="font-semibold mb-3">New Zone</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                 <Input placeholder="Country" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} />
                 <Input placeholder="State" value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} />
                 <Input placeholder="City" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
                 <Input placeholder="Zone name" value={form.zone} onChange={e => setForm(f => ({ ...f, zone: e.target.value }))} />
+                <Input placeholder="Pincode (6 digits)" value={form.pincode} onChange={e => setForm(f => ({ ...f, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))} maxLength={6} />
               </div>
               <div className="flex gap-2 mt-4">
                 <Button size="sm" onClick={handleAdd} disabled={submitting}>
@@ -164,12 +189,16 @@ const AdminZones = () => {
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">{z.zone}</span>
-                        {z.active !== undefined && (
+                        <div className="flex items-center gap-1.5">
                           <Badge variant={z.active ? "default" : "secondary"} className="text-xs">
                             {z.active ? "Active" : "Inactive"}
                           </Badge>
-                        )}
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleToggle(z.id)} title={z.active ? "Deactivate" : "Activate"}>
+                            <Power className={`w-3.5 h-3.5 ${z.active ? "text-green-500" : "text-muted-foreground"}`} />
+                          </Button>
+                        </div>
                       </div>
+                      {z.pincode && <p className="text-xs font-mono text-primary mb-1">📍 {z.pincode}</p>}
                       <p className="text-xs text-muted-foreground">{z.country}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Added {new Date(z.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}

@@ -22,6 +22,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
+        // If "Remember me" was unchecked, sessionStorage had a marker.
+        // Browser restart clears sessionStorage, so if marker is absent but tokens exist, clear them.
+        const sessionOnly = localStorage.getItem("customer_refreshToken") && !sessionStorage.getItem("customer_session_only") && !localStorage.getItem("customer_remember_me");
+        if (sessionOnly && localStorage.getItem("customer_user")) {
+          localStorage.removeItem("customer_accessToken");
+          localStorage.removeItem("customer_refreshToken");
+          localStorage.removeItem("customer_user");
+          if (!cancelled) setLoading(false);
+          return;
+        }
+
         const stored = localStorage.getItem("customer_user");
         if (stored) {
           setUser(JSON.parse(stored));
@@ -67,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("customer_accessToken");
     localStorage.removeItem("customer_refreshToken");
     localStorage.removeItem("customer_user");
+    localStorage.removeItem("customer_remember_me");
+    sessionStorage.removeItem("customer_session_only");
     setUser(null);
   }, []);
 

@@ -177,6 +177,8 @@ class ApiService {
     required String date,
     required String time,
     String? notes,
+    String? addressId,
+    String? pincode,
   }) async {
     final res = await _dio.post('/bookings', data: {
       'vendorId': vendorId,
@@ -184,6 +186,8 @@ class ApiService {
       'scheduledDate': date,
       'scheduledTime': time,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (addressId != null) 'addressId': addressId,
+      if (pincode != null) 'pincode': pincode,
     });
     return res.data;
   }
@@ -491,5 +495,45 @@ class ApiService {
     if (lng != null) params['lng'] = lng;
     final res = await _dio.get('/vendors/approved', queryParameters: params);
     return res.data['data'] ?? [];
+  }
+
+  // ─── Customer Addresses ────────────────────────
+  Future<List<dynamic>> getAddresses() async {
+    final res = await _dio.get('/addresses');
+    return res.data['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> getAddress(String id) async {
+    final res = await _dio.get('/addresses/$id');
+    return res.data['data'] ?? {};
+  }
+
+  Future<Map<String, dynamic>> createAddress(Map<String, dynamic> data) async {
+    final res = await _dio.post('/addresses', data: data);
+    return res.data['data'] ?? {};
+  }
+
+  Future<Map<String, dynamic>> updateAddress(String id, Map<String, dynamic> data) async {
+    final res = await _dio.put('/addresses/$id', data: data);
+    return res.data['data'] ?? {};
+  }
+
+  Future<void> deleteAddress(String id) async {
+    await _dio.delete('/addresses/$id');
+  }
+
+  Future<void> setDefaultAddress(String id) async {
+    await _dio.put('/addresses/$id/default');
+  }
+
+  // ─── Service Zones & Serviceability ────────────
+  Future<Map<String, dynamic>> checkServiceability(String pincode) async {
+    final res = await _dio.get('/service-zones/check', queryParameters: {'pincode': pincode});
+    return res.data['data'] ?? {};
+  }
+
+  Future<Map<String, dynamic>> lookupPincode(String pincode) async {
+    final res = await _dio.get('/service-zones/lookup-pincode/$pincode');
+    return res.data['data'] ?? {};
   }
 }

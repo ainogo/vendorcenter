@@ -588,6 +588,16 @@ const VendorLogin = () => {
               {t("login.registerAsVendor")}
             </Link>
           </p>
+
+          {/* Customer login link */}
+          <div className="mt-4 pt-4 border-t border-border/40">
+            <p className="text-center text-sm text-muted-foreground">
+              Looking for customer login?{" "}
+              <a href="/login" className="text-orange-600 hover:underline font-medium">
+                Sign in as Customer →
+              </a>
+            </p>
+          </div>
         </motion.div>
       </div>
 

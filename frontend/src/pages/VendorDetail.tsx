@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, MapPin, Star, BadgeCheck, Clock, Calendar, MessageSquare, Download, ChevronLeft, ChevronRight, X, Sparkles } from "lucide-react";
+import { ArrowLeft, MapPin, Star, BadgeCheck, Clock, Calendar, MessageSquare, Download, ChevronLeft, ChevronRight, X, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,9 @@ const VendorDetail = () => {
   const [notes, setNotes] = useState("");
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [addressPincode, setAddressPincode] = useState<string>("");
+  const [addressServiceable, setAddressServiceable] = useState<boolean | null>(null);
   const servicesRef = useScrollReveal({ preset: "fadeUp", delay: 0.1 });
   const bookingRef = useScrollReveal({ preset: "fadeRight", delay: 0.2 });
 
@@ -38,6 +41,35 @@ const VendorDetail = () => {
     },
     enabled: !!vendorId,
   });
+
+  const { data: addresses } = useQuery({
+    queryKey: ["my-addresses"],
+    queryFn: async () => {
+      const res = await api.getAddresses();
+      return res.data ?? [];
+    },
+    enabled: !!user && user.role === "customer",
+  });
+
+  // Auto-select default address
+  useEffect(() => {
+    if (addresses && addresses.length > 0 && !selectedAddressId) {
+      const def = addresses.find((a: any) => a.isDefault) || addresses[0];
+      setSelectedAddressId(def.id);
+      setAddressPincode(def.pincode || "");
+    }
+  }, [addresses]);
+
+  // Check serviceability when address changes
+  useEffect(() => {
+    if (!addressPincode || !/^\d{6}$/.test(addressPincode)) {
+      setAddressServiceable(null);
+      return;
+    }
+    api.checkServiceability(addressPincode)
+      .then(res => setAddressServiceable(res.data?.serviceable ?? false))
+      .catch(() => setAddressServiceable(null));
+  }, [addressPincode]);
 
   const photos: string[] = (() => {
     const portfolioUrls = vendor?.portfolioUrls || [];
@@ -72,6 +104,10 @@ const VendorDetail = () => {
     if (!selectedService) { toast.error(t("vendorDetail.selectService")); return; }
     if (!scheduledDate) { toast.error(t("vendorDetail.selectDate")); return; }
     if (!scheduledTime) { toast.error(t("vendorDetail.selectTime")); return; }
+    if (addressServiceable === false) {
+      toast.error("Your selected address is not in a serviceable area yet. Please choose a different address.");
+      return;
+    }
 
     setBooking(true);
     try {
@@ -81,6 +117,8 @@ const VendorDetail = () => {
         scheduledDate,
         scheduledTime,
         notes: notes || undefined,
+        addressId: selectedAddressId || undefined,
+        pincode: addressPincode || undefined,
       });
       toast.success(t("vendorDetail.bookingSent"));
       setScheduledDate("");
@@ -269,6 +307,50 @@ const VendorDetail = () => {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">{t("vendorDetail.selectFromList")}</p>
+              )}
+
+              {/* Address selector */}
+              {user && user.role === "customer" && (
+                <div>
+                  <label className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-primary" /> Service Address
+                  </label>
+                  {addresses && addresses.length > 0 ? (
+                    <>
+                      <select
+                        value={selectedAddressId}
+                        onChange={e => {
+                          const addr = addresses.find((a: any) => a.id === e.target.value);
+                          setSelectedAddressId(e.target.value);
+                          setAddressPincode(addr?.pincode || "");
+                        }}
+                        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="">Select an address</option>
+                        {addresses.map((a: any) => (
+                          <option key={a.id} value={a.id}>
+                            {a.label} — {a.fullAddress?.slice(0, 40)}{a.fullAddress?.length > 40 ? "..." : ""} ({a.pincode})
+                          </option>
+                        ))}
+                      </select>
+                      {addressServiceable === true && (
+                        <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> This area is serviceable
+                        </p>
+                      )}
+                      {addressServiceable === false && (
+                        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" /> This area may not be serviceable yet
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No saved addresses.{" "}
+                      <button onClick={() => navigate("/addresses")} className="text-primary hover:underline">Add one</button>
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* Date picker */}

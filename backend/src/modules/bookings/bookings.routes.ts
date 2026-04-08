@@ -24,6 +24,7 @@ import { sendBookingConfirmation, sendCompletionOtpEmail, sendNotificationEmail,
 import { findUserById } from "../auth/auth.repository.js";
 import { generateBookingReceipt } from "../../services/pdfService.js";
 import { getVendorProfile } from "../vendors/vendors.repository.js";
+import { checkServiceability } from "../service-zones/service-zones.repository.js";
 
 const statusSchema = z.enum(["pending", "confirmed", "in_progress", "completed", "cancelled"]);
 
@@ -36,13 +37,24 @@ bookingsRouter.post("/", requireRole(["customer"]), async (req: AuthRequest, res
       serviceName: z.string().min(2),
       scheduledDate: z.string().optional(),
       scheduledTime: z.string().optional(),
-      notes: z.string().max(500).optional()
+      notes: z.string().max(500).optional(),
+      addressId: z.string().uuid().optional(),
+      pincode: z.string().regex(/^\d{6}$/).optional(),
     })
     .safeParse(req.body);
 
   if (!parsed.success) {
     res.status(400).json({ success: false, error: parsed.error.flatten() });
     return;
+  }
+
+  // Block booking if pincode is provided but not in a serviceable zone
+  if (parsed.data.pincode) {
+    const serviceCheck = await checkServiceability(parsed.data.pincode);
+    if (!serviceCheck || !serviceCheck.serviceable) {
+      res.status(400).json({ success: false, error: "This pincode is not in a serviceable area yet." });
+      return;
+    }
   }
 
   const booking = await createBooking({
@@ -52,7 +64,9 @@ bookingsRouter.post("/", requireRole(["customer"]), async (req: AuthRequest, res
     transactionId: `txn_${nanoid(12)}`,
     scheduledDate: parsed.data.scheduledDate,
     scheduledTime: parsed.data.scheduledTime,
-    notes: parsed.data.notes
+    notes: parsed.data.notes,
+    serviceAddressId: parsed.data.addressId,
+    servicePincode: parsed.data.pincode,
   });
   trackActivity({
     actorId: req.actor!.id,

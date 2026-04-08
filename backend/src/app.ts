@@ -21,6 +21,8 @@ import { mapsRouter } from "./modules/maps/maps.routes.js";
 import { locationRouter } from "./modules/location/location.routes.js";
 import { emailTestRouter } from "./modules/email-test/email-test.routes.js";
 import { aiAssistantRouter } from "./modules/ai-assistant/ai-assistant.routes.js";
+import { serviceZonesRouter } from "./modules/service-zones/service-zones.routes.js";
+import { customerAddressesRouter } from "./modules/customer-addresses/customer-addresses.routes.js";
 
 import { dbState } from "./db/state.js";
 import { requestContext, requestLogger } from "./middleware/request-context.js";
@@ -240,6 +242,8 @@ app.use("/api/maps", mapsRouter);
 app.use("/api/location", locationRouter);
 app.use("/api/email-test", emailTestRouter);
 app.use("/api/ai-assistant", aiLimiter, aiAssistantRouter);
+app.use("/api/service-zones", serviceZonesRouter);
+app.use("/api/addresses", customerAddressesRouter);
 
 // API v1 aliases — forward-compatible versioned endpoints
 app.use("/api/v1/auth", authLimiter, authRouter);
@@ -259,6 +263,8 @@ app.use("/api/v1/uploads", uploadsRouter);
 app.use("/api/v1/maps", mapsRouter);
 app.use("/api/v1/location", locationRouter);
 app.use("/api/v1/ai-assistant", aiLimiter, aiAssistantRouter);
+app.use("/api/v1/service-zones", serviceZonesRouter);
+app.use("/api/v1/addresses", customerAddressesRouter);
 
 
 // Global error handler

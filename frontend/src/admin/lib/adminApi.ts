@@ -124,13 +124,16 @@ export const adminApi = {
   updateVendorVerification: (vendorId: string, status: string, note?: string) =>
     request(`/vendors/${vendorId}/verification`, {
       method: "PATCH",
-      body: JSON.stringify({ verificationStatus: status, note }),
+      body: JSON.stringify({ status, note }),
     }),
 
   getZones: () => request<any[]>("/zones"),
 
-  createZone: (payload: { country: string; state: string; city: string; zone: string }) =>
+  createZone: (payload: { country: string; state: string; city: string; zone: string; pincode?: string }) =>
     request<any>("/zones", { method: "POST", body: JSON.stringify(payload) }),
+
+  toggleZone: (zoneId: string) =>
+    request<any>(`/zones/${zoneId}/toggle`, { method: "PATCH" }),
 
   getAnalytics: () => request<any>("/analytics/admin"),
 
@@ -157,9 +160,65 @@ export const adminApi = {
       body: JSON.stringify(payload),
     }),
 
+  getEmployeePermissions: (userId: string) =>
+    request<{ permissions: string[] }>(`/admin/employees/${userId}/permissions`),
+
+  updateEmployeePermissions: (userId: string, permissions: string[]) =>
+    request<any>(`/admin/employees/${userId}/permissions`, {
+      method: "PUT",
+      body: JSON.stringify({ permissions }),
+    }),
+
+  verifyEmployee: (userId: string) =>
+    request<any>(`/admin/employees/${userId}/verify`, {
+      method: "PATCH",
+    }),
+
+  getMyPermissions: () =>
+    request<{ role: string; permissions: string[]; verified: boolean }>("/admin/me/permissions"),
+
   updateBookingStatus: (bookingId: string, status: string) =>
     request<any>(`/admin/bookings/${bookingId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
+
+  // ── Service Zones ────────────────────────────────────────────
+  getServiceStates: () => request<any[]>("/service-zones/states"),
+
+  createServiceState: (name: string, country = "India") =>
+    request<any>("/service-zones/states", { method: "POST", body: JSON.stringify({ name, country }) }),
+
+  getServiceZonesByState: (stateId: string) =>
+    request<any[]>(`/service-zones/states/${stateId}/zones`),
+
+  createServiceZone: (stateId: string, name: string, description?: string) =>
+    request<any>("/service-zones/zones", { method: "POST", body: JSON.stringify({ stateId, name, description }) }),
+
+  getServiceAreasByZone: (zoneId: string) =>
+    request<any[]>(`/service-zones/zones/${zoneId}/areas`),
+
+  createServiceArea: (zoneId: string, name: string) =>
+    request<any>("/service-zones/areas", { method: "POST", body: JSON.stringify({ zoneId, name }) }),
+
+  getServicePincodesByArea: (areaId: string) =>
+    request<any[]>(`/service-zones/areas/${areaId}/pincodes`),
+
+  createServicePincodes: (areaId: string, pincodes: string[], autoLookup = true) =>
+    request<any>("/service-zones/pincodes", { method: "POST", body: JSON.stringify({ areaId, pincodes, autoLookup }) }),
+
+  toggleServiceZoneLevel: (level: string, id: string) =>
+    request<any>(`/service-zones/${level}/${id}/toggle`, { method: "PATCH" }),
+
+  deleteServiceZoneLevel: (level: string, id: string) =>
+    request<any>(`/service-zones/${level}/${id}`, { method: "DELETE" }),
+
+  lookupPincode: (pincode: string) =>
+    request<any>(`/service-zones/lookup-pincode/${pincode}`),
+
+  quickAddPincode: (pincode: string, areaName?: string) =>
+    request<any>("/service-zones/quick-add-pincode", { method: "POST", body: JSON.stringify({ pincode, areaName }) }),
+
+  getServiceZoneCounts: () =>
+    request<{ states: number; zones: number; pincodes: number }>("/service-zones/counts"),
 };

@@ -20,7 +20,7 @@ interface VendorItem {
 }
 
 const AdminVendors = () => {
-  const { user, logout, loading } = useAdminAuth();
+  const { user, logout, loading, hasPermission } = useAdminAuth();
   const navigate = useNavigate();
   const [vendors, setVendors] = useState<VendorItem[]>([]);
   const [filter, setFilter] = useState<string>("under_review");
@@ -29,6 +29,18 @@ const AdminVendors = () => {
   useEffect(() => {
     if (!loading && !user) navigate("/login");
   }, [user, loading, navigate]);
+
+  if (!loading && user && !hasPermission("vendors.view")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-4">You don't have permission to view this page.</p>
+          <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (user) {
@@ -75,7 +87,9 @@ const AdminVendors = () => {
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground">Dashboard</Link>
             <Link to="/vendors" className="text-sm font-medium text-foreground">Vendors</Link>
-            <Link to="/users" className="text-sm font-medium text-muted-foreground hover:text-foreground">Users</Link>
+            {hasPermission("users.view") && <Link to="/users" className="text-sm font-medium text-muted-foreground hover:text-foreground">Users</Link>}
+            {hasPermission("bookings.view") && <Link to="/bookings" className="text-sm font-medium text-muted-foreground hover:text-foreground">Bookings</Link>}
+            {hasPermission("zones.manage") && <Link to="/zones" className="text-sm font-medium text-muted-foreground hover:text-foreground">Zones</Link>}
           </nav>
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={async () => { await logout(); navigate("/login"); }}>

@@ -2,47 +2,21 @@ import { Router } from "express";
 import { requireRole } from "../../middleware/auth.js";
 import { AuthRequest } from "../../middleware/auth.js";
 import { getBookingStats, getVendorBookingStats } from "../bookings/bookings.repository.js";
-import { countZones } from "../zones/zones.repository.js";
+import { countZones, countActiveCities } from "../zones/zones.repository.js";
 import { getVendorRating } from "../reviews/reviews.repository.js";
 import { pool } from "../../db/pool.js";
 
 export const analyticsRouter = Router();
 
-function normalizeCityFromZone(zone: string): string {
-  const parts = zone.split(",").map((p) => p.trim()).filter(Boolean);
-  if (parts.length === 0) return "";
-
-  const cleaned = parts.filter((part) => {
-    const lower = part.toLowerCase();
-    if (lower === "india") return false;
-    if (lower.includes("district") || lower.includes("state")) return false;
-    if (/^\d+$/.test(part)) return false;
-    return true;
-  });
-
-  if (cleaned.length === 0) return "";
-
-  // Our zone format is usually: locality, city, state.
-  // Prefer the city token (second meaningful token) when available.
-  if (cleaned.length >= 2) return cleaned[1];
-  return cleaned[0];
-}
-
 // Public homepage counters (no auth)
 analyticsRouter.get("/public", async (_req, res, next) => {
   try {
-    const [vendorsR, customersR, completedR, vendorZonesR] = await Promise.all([
+    const [vendorsR, customersR, completedR, citiesCount] = await Promise.all([
       pool.query("SELECT COUNT(*)::int AS total FROM vendor_profiles WHERE verification_status = 'approved'"),
       pool.query("SELECT COUNT(*)::int AS total FROM users WHERE role = 'customer'"),
       pool.query("SELECT COUNT(*)::int AS total FROM bookings WHERE status = 'completed'"),
-      pool.query<{ zone: string }>("SELECT zone FROM vendor_profiles WHERE verification_status = 'approved' AND zone IS NOT NULL"),
+      countActiveCities(),
     ]);
-
-    const coveredCities = new Set<string>();
-    for (const row of vendorZonesR.rows) {
-      const city = normalizeCityFromZone(row.zone || "");
-      if (city) coveredCities.add(city.toLowerCase());
-    }
 
     res.json({
       success: true,
@@ -50,7 +24,7 @@ analyticsRouter.get("/public", async (_req, res, next) => {
         activeVendors: vendorsR.rows[0]?.total ?? 0,
         happyCustomers: customersR.rows[0]?.total ?? 0,
         servicesCompleted: completedR.rows[0]?.total ?? 0,
-        citiesCovered: coveredCities.size,
+        citiesCovered: citiesCount,
       },
     });
   } catch (err) {
@@ -86,19 +60,77 @@ analyticsRouter.get("/vendor", requireRole(["vendor"]), async (req: AuthRequest,
   });
 });
 
-analyticsRouter.get("/admin", requireRole(["admin"]), async (_req, res) => {
-  const totalBookings = await getBookingStats();
-  const activeZones = await countZones();
-  res.json({
-    success: true,
-    data: {
-      platformRevenueEstimate: totalBookings * 100,
-      topVendors: [],
+analyticsRouter.get("/admin", requireRole(["admin"]), async (_req, res, next) => {
+  try {
+    const [
+      bookingsByStatus,
+      revenueR,
+      monthlyBookingsR,
+      topVendorsR,
+      customerGrowthR,
+      vendorGrowthR,
       activeZones,
-      bookingTrends: {
-        today: totalBookings,
-        weekly: totalBookings
-      }
-    }
-  });
+      totalCustomersR,
+      totalVendorsR,
+    ] = await Promise.all([
+      pool.query<{ status: string; count: number }>(
+        `SELECT status, COUNT(*)::int as count FROM bookings GROUP BY status`
+      ),
+      pool.query<{ total: string }>(
+        `SELECT COALESCE(SUM(final_amount), 0)::text as total FROM bookings WHERE payment_status = 'success'`
+      ),
+      pool.query<{ month: string; count: number }>(
+        `SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*)::int as count
+         FROM bookings WHERE created_at >= NOW() - INTERVAL '6 months'
+         GROUP BY month ORDER BY month`
+      ),
+      pool.query<{ vendor_id: string; business_name: string; bookings: number; revenue: string }>(
+        `SELECT vp.vendor_id, vp.business_name,
+                COUNT(b.id)::int as bookings,
+                COALESCE(SUM(b.final_amount), 0)::text as revenue
+         FROM vendor_profiles vp
+         LEFT JOIN bookings b ON b.vendor_id = vp.vendor_id AND b.status != 'cancelled'
+         GROUP BY vp.vendor_id, vp.business_name
+         ORDER BY bookings DESC LIMIT 10`
+      ),
+      pool.query<{ month: string; count: number }>(
+        `SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*)::int as count
+         FROM users WHERE role = 'customer' AND created_at >= NOW() - INTERVAL '6 months'
+         GROUP BY month ORDER BY month`
+      ),
+      pool.query<{ month: string; count: number }>(
+        `SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*)::int as count
+         FROM users WHERE role = 'vendor' AND created_at >= NOW() - INTERVAL '6 months'
+         GROUP BY month ORDER BY month`
+      ),
+      countZones(),
+      pool.query<{ total: number }>("SELECT COUNT(*)::int as total FROM users WHERE role = 'customer'"),
+      pool.query<{ total: number }>("SELECT COUNT(*)::int as total FROM users WHERE role = 'vendor'"),
+    ]);
+
+    const statusMap: Record<string, number> = {};
+    for (const row of bookingsByStatus.rows) statusMap[row.status] = row.count;
+
+    res.json({
+      success: true,
+      data: {
+        totalRevenue: Number(revenueR.rows[0]?.total ?? 0),
+        totalCustomers: totalCustomersR.rows[0]?.total ?? 0,
+        totalVendors: totalVendorsR.rows[0]?.total ?? 0,
+        activeZones,
+        bookingsByStatus: statusMap,
+        monthlyBookings: monthlyBookingsR.rows,
+        topVendors: topVendorsR.rows.map(v => ({
+          vendorId: v.vendor_id,
+          businessName: v.business_name,
+          bookings: v.bookings,
+          revenue: Number(v.revenue),
+        })),
+        customerGrowth: customerGrowthR.rows,
+        vendorGrowth: vendorGrowthR.rows,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 });

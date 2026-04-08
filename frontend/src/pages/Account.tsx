@@ -181,6 +181,13 @@ const Account = () => {
                   {tab.label}
                 </button>
               ))}
+              <button
+                onClick={() => navigate("/addresses")}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors w-full text-left text-muted-foreground hover:bg-secondary"
+              >
+                <MapPin className="w-5 h-5" />
+                My Addresses
+              </button>
             </nav>
           </aside>
 

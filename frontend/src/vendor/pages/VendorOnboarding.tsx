@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { ArrowRight, ArrowLeft, Loader2, Store, MapPin, Clock, LocateFixed, ImagePlus, X as XIcon } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Store, MapPin, Clock, LocateFixed, ImagePlus, X as XIcon, Search, CheckCircle2, AlertTriangle } from "lucide-react";
 import VendorHeader from "@/vendor/components/VendorHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,17 @@ const VendorOnboarding = () => {
   const [accountEmail, setAccountEmail] = useState("");
   const [accountPhone, setAccountPhone] = useState("");
   const [businessNameLocked, setBusinessNameLocked] = useState(false);
+
+  // Service Coverage state
+  const [primaryPincode, setPrimaryPincode] = useState("");
+  const [pincodeInput, setPincodeInput] = useState("");
+  const [pincodeLookup, setPincodeLookup] = useState<any>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [hierarchyData, setHierarchyData] = useState<any[]>([]);
+  const [selectedPincodeIds, setSelectedPincodeIds] = useState<string[]>([]);
+  const [expandedStates, setExpandedStates] = useState<Record<string, boolean>>({});
+  const [expandedZones, setExpandedZones] = useState<Record<string, boolean>>({});
+  const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
 
   // Pre-fill from signed-up account details and local signup draft.
   useEffect(() => {
@@ -147,6 +158,47 @@ const VendorOnboarding = () => {
 
   const businessNameFromSignup = businessNameLocked;
 
+  // Load hierarchy for pincode selection
+  useEffect(() => {
+    api.getServiceZoneHierarchy().then(res => {
+      if (res.data) setHierarchyData(res.data as any[]);
+    }).catch(() => {});
+  }, []);
+
+  const handlePincodeLookup = async () => {
+    if (!/^\d{6}$/.test(pincodeInput)) {
+      toast.error("Enter a valid 6-digit pincode");
+      return;
+    }
+    setLookingUp(true);
+    setPincodeLookup(null);
+    try {
+      const res = await api.checkServiceability(pincodeInput);
+      if (res.data?.serviceable) {
+        setPincodeLookup({ ...res.data, status: "serviceable" });
+        setPrimaryPincode(pincodeInput);
+      } else {
+        // Try India Post to show info even if not in our zones
+        try {
+          const lookupRes = await api.lookupPincode(pincodeInput);
+          setPincodeLookup({ ...(lookupRes.data || {}), status: "not_serviceable" });
+        } catch {
+          setPincodeLookup({ status: "not_serviceable", pincode: pincodeInput });
+        }
+      }
+    } catch {
+      setPincodeLookup({ status: "error" });
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
+  const togglePincodeId = (id: string) => {
+    setSelectedPincodeIds(prev =>
+      prev.includes(id) ? prev.filter(p => p !== id) : prev.length < 100 ? [...prev, id] : prev
+    );
+  };
+
   const setLocationAndGeocode = async (lat: number, lng: number) => {
     setLatitude(String(lat));
     setLongitude(String(lng));
@@ -212,6 +264,8 @@ const VendorOnboarding = () => {
         serviceRadiusKm: parseFloat(serviceRadius) || 10,
         workingHours,
         portfolioUrls: uploadedUrls,
+        primaryPincode: primaryPincode || undefined,
+        servicePincodeIds: selectedPincodeIds.length > 0 ? selectedPincodeIds : undefined,
       });
       localStorage.removeItem(VENDOR_SIGNUP_PREFILL_KEY);
       setOnboardingStatus("complete");
@@ -384,6 +438,129 @@ const VendorOnboarding = () => {
                   <label className="text-sm font-medium mb-1.5 block">{t("onboarding.serviceRadiusKm", { defaultValue: "Service Radius (km)" })}</label>
                   <Input placeholder="10" className="h-11 rounded-xl" type="number" value={serviceRadius} onChange={e => setServiceRadius(e.target.value)} />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Service Coverage — Pincode Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Search className="w-5 h-5 text-emerald-500" />
+                  {t("onboarding.serviceCoverage", { defaultValue: "Service Coverage (Pincodes)" })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {t("onboarding.serviceCoverageDesc", { defaultValue: "Enter your primary pincode and select service areas. This helps customers find you." })}
+                </p>
+
+                {/* Pincode lookup */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter 6-digit pincode"
+                    className="h-11 rounded-xl flex-1"
+                    maxLength={6}
+                    value={pincodeInput}
+                    onChange={e => setPincodeInput(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={e => e.key === "Enter" && handlePincodeLookup()}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-xl px-4"
+                    disabled={lookingUp || pincodeInput.length !== 6}
+                    onClick={handlePincodeLookup}
+                  >
+                    {lookingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  </Button>
+                </div>
+
+                {/* Lookup result */}
+                {pincodeLookup && (
+                  <div className={`rounded-xl border p-3 text-sm ${
+                    pincodeLookup.status === "serviceable"
+                      ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800"
+                      : "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800"
+                  }`}>
+                    {pincodeLookup.status === "serviceable" ? (
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-emerald-700 dark:text-emerald-400">Pincode {pincodeInput} is serviceable!</p>
+                          {pincodeLookup.state && <p className="text-emerald-600/80 dark:text-emerald-500/80">{pincodeLookup.area} → {pincodeLookup.zone} → {pincodeLookup.state}</p>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-amber-700 dark:text-amber-400">This pincode is not yet in our service zones.</p>
+                          <p className="text-amber-600/80 dark:text-amber-500/80 mt-0.5">You can still register. We'll notify you when we expand to this area.</p>
+                          {pincodeLookup.state && <p className="text-amber-600/60 text-xs mt-1">{pincodeLookup.district}, {pincodeLookup.state}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {primaryPincode && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Primary pincode:</span>
+                    <span className="font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-lg">{primaryPincode}</span>
+                  </div>
+                )}
+
+                {/* Hierarchy tree for selecting service pincodes */}
+                {hierarchyData.length > 0 && (
+                  <div className="border rounded-xl p-3 max-h-64 overflow-y-auto space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Select pincodes you serve ({selectedPincodeIds.length} selected):</p>
+                    {hierarchyData.map((state: any) => (
+                      <div key={state.id}>
+                        <button
+                          type="button"
+                          className="w-full text-left text-sm font-medium py-1 px-2 hover:bg-muted/50 rounded flex items-center gap-1"
+                          onClick={() => setExpandedStates(p => ({ ...p, [state.id]: !p[state.id] }))}
+                        >
+                          <span className="text-xs">{expandedStates[state.id] ? "▼" : "▶"}</span> {state.name}
+                        </button>
+                        {expandedStates[state.id] && state.zones?.map((zone: any) => (
+                          <div key={zone.id} className="ml-4">
+                            <button
+                              type="button"
+                              className="w-full text-left text-sm py-0.5 px-2 hover:bg-muted/50 rounded flex items-center gap-1"
+                              onClick={() => setExpandedZones(p => ({ ...p, [zone.id]: !p[zone.id] }))}
+                            >
+                              <span className="text-xs">{expandedZones[zone.id] ? "▼" : "▶"}</span> {zone.name}
+                            </button>
+                            {expandedZones[zone.id] && zone.areas?.map((area: any) => (
+                              <div key={area.id} className="ml-4">
+                                <button
+                                  type="button"
+                                  className="w-full text-left text-xs py-0.5 px-2 hover:bg-muted/50 rounded flex items-center gap-1"
+                                  onClick={() => setExpandedAreas(p => ({ ...p, [area.id]: !p[area.id] }))}
+                                >
+                                  <span className="text-[10px]">{expandedAreas[area.id] ? "▼" : "▶"}</span> {area.name}
+                                </button>
+                                {expandedAreas[area.id] && area.pincodes?.map((pin: any) => (
+                                  <label key={pin.id} className="ml-4 flex items-center gap-2 py-0.5 px-2 text-xs cursor-pointer hover:bg-muted/50 rounded">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedPincodeIds.includes(pin.id)}
+                                      onChange={() => togglePincodeId(pin.id)}
+                                      className="rounded border-border"
+                                    />
+                                    <span>{pin.pincode}</span>
+                                    {!pin.is_active && <span className="text-muted-foreground">(inactive)</span>}
+                                  </label>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

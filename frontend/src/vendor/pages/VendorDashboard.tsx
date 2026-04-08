@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, Calendar, Settings, LogOut, ClipboardList,
-  TrendingUp, Clock, CheckCircle2, AlertCircle, Store, Pencil, User
+  TrendingUp, Clock, CheckCircle2, AlertCircle, Store, Pencil, User, MapPin
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ const VendorDashboard = () => {
   const [hasProfile, setHasProfile] = useState(false);
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
+  const [hasServicePincodes, setHasServicePincodes] = useState<boolean | null>(null);
   const { t } = useTranslation("vendor");
 
   useEffect(() => {
@@ -44,6 +45,13 @@ const VendorDashboard = () => {
         setHasProfile(false);
         setOnboarded(false);
       });
+
+    api.getServicePincodes()
+      .then((res) => {
+        const pincodes = res.data || [];
+        setHasServicePincodes(Array.isArray(pincodes) && pincodes.length > 0);
+      })
+      .catch(() => setHasServicePincodes(false));
 
     api.getProfile()
       .then((res) => {
@@ -179,6 +187,28 @@ const VendorDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Service Coverage Banner — for vendors without pincodes set */}
+        {hasServicePincodes === false && onboarded !== false && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            <Card className="mt-8 border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium text-emerald-800 dark:text-emerald-200">Update Your Service Coverage</p>
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
+                      We've upgraded to pincode-based service areas. Set your service pincodes so customers in your area can find you easily.
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-3 border-emerald-300 text-emerald-700 hover:bg-emerald-100" onClick={() => navigate("/service-coverage")}>
+                      Set Service Pincodes
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Verification Status */}
         {!user.verified && (

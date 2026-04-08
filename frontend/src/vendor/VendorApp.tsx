@@ -12,6 +12,7 @@ import VendorOnboarding from "./pages/VendorOnboarding";
 import VendorEditProfile from "./pages/VendorEditProfile";
 import VendorBookings from "./pages/VendorBookings";
 import VendorServices from "./pages/VendorServices";
+import VendorServiceCoverage from "./pages/VendorServiceCoverage";
 import NotFound from "./pages/NotFound";
 import RequireVendorOnboardingComplete from "./components/RequireVendorOnboardingComplete";
 
@@ -59,6 +60,14 @@ const VendorApp = () => (
               element={
                 <RequireVendorOnboardingComplete>
                   <VendorServices />
+                </RequireVendorOnboardingComplete>
+              }
+            />
+            <Route
+              path="/service-coverage"
+              element={
+                <RequireVendorOnboardingComplete>
+                  <VendorServiceCoverage />
                 </RequireVendorOnboardingComplete>
               }
             />

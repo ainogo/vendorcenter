@@ -141,6 +141,77 @@ const MIGRATIONS = [
   `CREATE UNIQUE INDEX IF NOT EXISTS users_phone_role_unique ON users (phone, role) WHERE phone IS NOT NULL AND phone != ''`,
   `CREATE UNIQUE INDEX IF NOT EXISTS users_email_role_unique ON users (email, role) WHERE email IS NOT NULL`,
   `CREATE UNIQUE INDEX IF NOT EXISTS users_firebase_uid_role_unique ON users (firebase_uid, role) WHERE firebase_uid IS NOT NULL`,
+  // Zones: add pincode column for pincode-level granularity
+  `ALTER TABLE zones ADD COLUMN IF NOT EXISTS pincode TEXT`,
+  // === Hierarchical Service Zones (Phase 1) ===
+  `CREATE TABLE IF NOT EXISTS service_states (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    country TEXT NOT NULL DEFAULT 'India',
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(name, country)
+  )`,
+  `CREATE TABLE IF NOT EXISTS service_zones (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    state_id UUID NOT NULL REFERENCES service_states(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(state_id, name)
+  )`,
+  `CREATE TABLE IF NOT EXISTS service_areas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    zone_id UUID NOT NULL REFERENCES service_zones(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(zone_id, name)
+  )`,
+  `CREATE TABLE IF NOT EXISTS service_pincodes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    area_id UUID NOT NULL REFERENCES service_areas(id) ON DELETE CASCADE,
+    pincode CHAR(6) NOT NULL UNIQUE,
+    locality_name TEXT,
+    district TEXT,
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE TABLE IF NOT EXISTS vendor_service_pincodes (
+    vendor_id TEXT NOT NULL,
+    pincode_id UUID NOT NULL REFERENCES service_pincodes(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (vendor_id, pincode_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS customer_addresses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id TEXT NOT NULL,
+    label TEXT NOT NULL DEFAULT 'Home',
+    full_address TEXT NOT NULL,
+    landmark TEXT,
+    pincode CHAR(6) NOT NULL,
+    city TEXT,
+    state TEXT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_customer_addresses_customer ON customer_addresses(customer_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_service_pincodes_area ON service_pincodes(area_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_service_pincodes_pincode ON service_pincodes(pincode)`,
+  `CREATE INDEX IF NOT EXISTS idx_vendor_service_pincodes_vendor ON vendor_service_pincodes(vendor_id)`,
+  `ALTER TABLE vendor_profiles ADD COLUMN IF NOT EXISTS primary_pincode CHAR(6)`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_address_id UUID`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_pincode CHAR(6)`,
+  `ALTER TABLE service_states ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE service_zones ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE service_areas ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE service_pincodes ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE vendor_service_pincodes ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE customer_addresses ENABLE ROW LEVEL SECURITY`,
 ];
 
 export async function initializeDatabase() {
@@ -159,8 +230,29 @@ export async function initializeDatabase() {
     // Verify connection still works
     await pool.query("SELECT 1");
   } else {
-    const sql = readFileSync(schemaPath, "utf8");
-    await pool.query(sql);
+    let sql = readFileSync(schemaPath, "utf8");
+    // Strip pgvector extension line — it's handled in MIGRATIONS with try/catch
+    sql = sql.replace(/CREATE EXTENSION IF NOT EXISTS\s+"?vector"?\s*;/gi, "-- vector extension handled in migrations");
+
+    // Check if pgvector is available BEFORE running schema
+    let hasVector = false;
+    try {
+      const extCheck = await pool.query("SELECT 1 FROM pg_extension WHERE extname = 'vector'");
+      hasVector = extCheck.rowCount! > 0;
+    } catch {
+      // pg_extension query failed — assume no vector
+    }
+
+    if (!hasVector) {
+      // Strip vector column definitions so schema doesn't fail on local dev
+      sql = sql.replace(/,?\s*embedding\s+vector\(\d+\)/g, "");
+    }
+
+    try {
+      await pool.query(sql);
+    } catch (schemaErr) {
+      console.warn(`[db] schema.sql failed, starting in degraded mode: ${(schemaErr as Error).message}`);
+    }
   }
 
   // Run lightweight migrations

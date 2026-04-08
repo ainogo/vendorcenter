@@ -25,12 +25,12 @@ export interface DbBooking {
   updatedAt: string;
 }
 
-export async function createBooking(input: { customerId: string; vendorId: string; serviceName: string; transactionId: string; scheduledDate?: string; scheduledTime?: string; notes?: string }) {
+export async function createBooking(input: { customerId: string; vendorId: string; serviceName: string; transactionId: string; scheduledDate?: string; scheduledTime?: string; notes?: string; serviceAddressId?: string; servicePincode?: string }) {
   const result = await pool.query<DbBooking>(
-    `INSERT INTO bookings (customer_id, vendor_id, service_name, status, transaction_id, payment_status, scheduled_date, scheduled_time, notes)
-     VALUES ($1, $2, $3, 'pending', $4, 'pending', $5, $6, $7)
+    `INSERT INTO bookings (customer_id, vendor_id, service_name, status, transaction_id, payment_status, scheduled_date, scheduled_time, notes, service_address_id, service_pincode)
+     VALUES ($1, $2, $3, 'pending', $4, 'pending', $5, $6, $7, $8, $9)
     RETURNING id, customer_id as "customerId", vendor_id as "vendorId", service_name as "serviceName", status, transaction_id as "transactionId", payment_status as "paymentStatus", scheduled_date as "scheduledDate", scheduled_time as "scheduledTime", notes, final_amount as "finalAmount", work_started_at as "workStartedAt", completion_requested_at as "completionRequestedAt", payment_request_token_hash as "paymentRequestTokenHash", payment_request_expires as "paymentRequestExpires", rejection_reason as "rejectionReason", created_at as "createdAt", updated_at as "updatedAt"`,
-    [input.customerId, input.vendorId, input.serviceName, input.transactionId, input.scheduledDate || null, input.scheduledTime || null, input.notes || null]
+    [input.customerId, input.vendorId, input.serviceName, input.transactionId, input.scheduledDate || null, input.scheduledTime || null, input.notes || null, input.serviceAddressId || null, input.servicePincode || null]
   );
   return result.rows[0];
 }

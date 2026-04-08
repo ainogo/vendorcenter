@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation as useRouterLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Compass, Menu, X, ChevronDown, User, LogOut, ClipboardList, Settings } from "lucide-react";
+import { MapPin, Compass, Menu, X, ChevronDown, User, LogOut, ClipboardList, Settings, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,9 +16,11 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
   const [topCategoriesOpen, setTopCategoriesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const loginDropdownRef = useRef<HTMLDivElement>(null);
   const topCategoriesRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const routerLocation = useRouterLocation();
@@ -89,19 +91,22 @@ const Header = () => {
     navigate("/");
   };
 
-  // Close profile dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setProfileDropdownOpen(false);
       }
+      if (loginDropdownRef.current && !loginDropdownRef.current.contains(e.target as Node)) {
+        setLoginDropdownOpen(false);
+      }
       if (topCategoriesRef.current && !topCategoriesRef.current.contains(e.target as Node)) {
         setTopCategoriesOpen(false);
       }
     };
-    if (profileDropdownOpen || topCategoriesOpen) document.addEventListener("mousedown", handler);
+    if (profileDropdownOpen || loginDropdownOpen || topCategoriesOpen) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [profileDropdownOpen, topCategoriesOpen]);
+  }, [profileDropdownOpen, loginDropdownOpen, topCategoriesOpen]);
 
   return (
     <header className="sticky top-0 z-50 glass transition-all duration-300">
@@ -208,14 +213,41 @@ const Header = () => {
                 )}
               </div>
             ) : (
-              <Button
-                size="sm"
-                className="gradient-bg text-primary-foreground border-0 rounded-xl font-medium"
-                onClick={() => navigate("/login")}
-              >
-                <User className="w-4 h-4 mr-1.5" />
-                {t("nav.login")}
-              </Button>
+              <div className="relative" ref={loginDropdownRef}>
+                <Button
+                  size="sm"
+                  className="gradient-bg text-primary-foreground border-0 rounded-xl font-medium"
+                  onClick={() => setLoginDropdownOpen(!loginDropdownOpen)}
+                >
+                  <User className="w-4 h-4 mr-1.5" />
+                  {t("nav.login")}
+                  <ChevronDown className={`w-3 h-3 ml-1 transition-transform ${loginDropdownOpen ? "rotate-180" : ""}`} />
+                </Button>
+                {loginDropdownOpen && (
+                  <div className="absolute right-0 top-12 w-56 bg-card rounded-xl border border-border shadow-lg py-2 z-50">
+                    <button
+                      onClick={() => { navigate("/login"); setLoginDropdownOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-secondary transition-colors flex items-center gap-3"
+                    >
+                      <User className="w-4 h-4 text-primary" />
+                      <div>
+                        <p className="font-medium">Customer Login</p>
+                        <p className="text-xs text-muted-foreground">Book services & manage orders</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { window.location.href = "/vendor/login"; setLoginDropdownOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-secondary transition-colors flex items-center gap-3"
+                    >
+                      <Briefcase className="w-4 h-4 text-orange-500" />
+                      <div>
+                        <p className="font-medium">Vendor Login</p>
+                        <p className="text-xs text-muted-foreground">Manage your business & services</p>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -327,10 +359,16 @@ const Header = () => {
                     </Button>
                   </>
                 ) : (
-                  <Button size="sm" className="flex-1 gradient-bg text-primary-foreground border-0 rounded-xl" onClick={() => { navigate("/login"); setMobileMenuOpen(false); }}>
-                    <User className="w-4 h-4 mr-1.5" />
-                    {t("nav.login")}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1 gradient-bg text-primary-foreground border-0 rounded-xl" onClick={() => { navigate("/login"); setMobileMenuOpen(false); }}>
+                      <User className="w-4 h-4 mr-1.5" />
+                      Customer Login
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1 rounded-xl" onClick={() => { window.location.href = "/vendor/login"; setMobileMenuOpen(false); }}>
+                      <Briefcase className="w-4 h-4 mr-1.5" />
+                      Vendor Login
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

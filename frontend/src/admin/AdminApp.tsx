@@ -9,7 +9,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminVendors from "./pages/AdminVendors";
 import AdminUsers from "./pages/AdminUsers";
 import AdminBookings from "./pages/AdminBookings";
-import AdminZones from "./pages/AdminZones";
+import AdminServiceZones from "./pages/AdminServiceZones";
+import AdminAnalytics from "./pages/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -27,7 +28,9 @@ const AdminApp = () => (
             <Route path="/vendors" element={<AdminVendors />} />
             <Route path="/users" element={<AdminUsers />} />
             <Route path="/bookings" element={<AdminBookings />} />
-            <Route path="/zones" element={<AdminZones />} />
+            <Route path="/zones" element={<AdminServiceZones />} />
+            <Route path="/service-zones" element={<AdminServiceZones />} />
+            <Route path="/analytics" element={<AdminAnalytics />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>

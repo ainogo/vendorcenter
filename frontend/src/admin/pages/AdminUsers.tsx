@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Shield, LogOut, ArrowLeft, Search, Mail, Phone, CheckCircle, XCircle, Trash2, Ban, UserPlus, MoreHorizontal, ShieldAlert } from "lucide-react";
+import { Shield, LogOut, ArrowLeft, Search, Mail, Phone, CheckCircle, XCircle, Trash2, Ban, UserPlus, MoreHorizontal, ShieldAlert, ShieldCheck, KeyRound, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,7 @@ const PERMISSIONS = [
 ];
 
 const AdminUsers = () => {
-  const { user, logout, loading } = useAdminAuth();
+  const { user, logout, loading, hasPermission } = useAdminAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [filter, setFilter] = useState<string>("all");
@@ -48,10 +48,39 @@ const AdminUsers = () => {
   const [employeeForm, setEmployeeForm] = useState({ email: "", password: "", name: "", phone: "", role: "employee" as string, permissions: [] as string[] });
   const [createError, setCreateError] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editPermUser, setEditPermUser] = useState<UserItem | null>(null);
+  const [editPerms, setEditPerms] = useState<string[]>([]);
+  const [permLoading, setPermLoading] = useState(false);
+  const [myPermissions, setMyPermissions] = useState<string[]>([]);
+  const [myRole, setMyRole] = useState<string>("");
 
   useEffect(() => {
     if (!loading && !user) navigate("/login");
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    adminApi.getMyPermissions()
+      .then(res => {
+        if (res.data) {
+          setMyPermissions(res.data.permissions);
+          setMyRole(res.data.role);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
+  if (!loading && user && !hasPermission("users.view")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-4">You don't have permission to view this page.</p>
+          <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
 
   const loadUsers = () => {
     if (!user) return;
@@ -132,6 +161,54 @@ const AdminUsers = () => {
     }));
   };
 
+  const isAdmin = myRole === "admin" || myPermissions.includes("*");
+
+  const handleVerifyEmployee = async (u: UserItem) => {
+    if (!confirm(`Approve ${u.email || u.name || u.id} to access the admin portal?`)) return;
+    setActionLoading(u.id);
+    try {
+      await adminApi.verifyEmployee(u.id);
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, verified: true } : x));
+    } catch (e: any) {
+      alert(e.message || "Failed to verify employee");
+    } finally {
+      setActionLoading(null);
+      setOpenMenuId(null);
+    }
+  };
+
+  const handleOpenEditPerms = async (u: UserItem) => {
+    setPermLoading(true);
+    setEditPermUser(u);
+    try {
+      const res = await adminApi.getEmployeePermissions(u.id);
+      setEditPerms(res.data?.permissions || []);
+    } catch {
+      setEditPerms([]);
+    } finally {
+      setPermLoading(false);
+    }
+  };
+
+  const toggleEditPerm = (perm: string) => {
+    setEditPerms(prev =>
+      prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
+    );
+  };
+
+  const handleSavePerms = async () => {
+    if (!editPermUser) return;
+    setPermLoading(true);
+    try {
+      await adminApi.updateEmployeePermissions(editPermUser.id, editPerms);
+      setEditPermUser(null);
+    } catch (e: any) {
+      alert(e.message || "Failed to update permissions");
+    } finally {
+      setPermLoading(false);
+    }
+  };
+
   if (loading || !user) return null;
 
   const filtered = search.trim()
@@ -157,10 +234,10 @@ const AdminUsers = () => {
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground">Dashboard</Link>
-            <Link to="/vendors" className="text-sm font-medium text-muted-foreground hover:text-foreground">Vendors</Link>
+            {hasPermission("vendors.view") && <Link to="/vendors" className="text-sm font-medium text-muted-foreground hover:text-foreground">Vendors</Link>}
             <Link to="/users" className="text-sm font-medium text-foreground">Users</Link>
-            <Link to="/bookings" className="text-sm font-medium text-muted-foreground hover:text-foreground">Bookings</Link>
-            <Link to="/zones" className="text-sm font-medium text-muted-foreground hover:text-foreground">Zones</Link>
+            {hasPermission("bookings.view") && <Link to="/bookings" className="text-sm font-medium text-muted-foreground hover:text-foreground">Bookings</Link>}
+            {hasPermission("zones.manage") && <Link to="/zones" className="text-sm font-medium text-muted-foreground hover:text-foreground">Zones</Link>}
           </nav>
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={async () => { await logout(); navigate("/login"); }}>
@@ -192,7 +269,7 @@ const AdminUsers = () => {
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCreateEmployee(false)}>
             <Card className="w-full max-w-lg" onClick={e => e.stopPropagation()}>
               <CardContent className="p-6">
-                <h2 className="text-lg font-bold mb-4">Create Employee / Sub-Admin</h2>
+                <h2 className="text-lg font-bold mb-4">{isAdmin ? "Create Employee / Sub-Admin" : "Create Employee"}</h2>
                 <form onSubmit={handleCreateEmployee} className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -214,17 +291,19 @@ const AdminUsers = () => {
                       <Input value={employeeForm.phone} onChange={e => setEmployeeForm(p => ({ ...p, phone: e.target.value }))} />
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Role</label>
-                    <div className="flex gap-3">
-                      {["employee", "admin"].map(r => (
-                        <label key={r} className="flex items-center gap-2 cursor-pointer">
-                          <input type="radio" name="role" value={r} checked={employeeForm.role === r} onChange={() => setEmployeeForm(p => ({ ...p, role: r }))} />
-                          <span className="text-sm capitalize">{r === "admin" ? "Sub-Admin" : "Employee"}</span>
-                        </label>
-                      ))}
+                  {isAdmin && (
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Role</label>
+                      <div className="flex gap-3">
+                        {["employee", "admin"].map(r => (
+                          <label key={r} className="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="role" value={r} checked={employeeForm.role === r} onChange={() => setEmployeeForm(p => ({ ...p, role: r }))} />
+                            <span className="text-sm capitalize">{r === "admin" ? "Sub-Admin" : "Employee"}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   {employeeForm.role === "employee" && (
                     <div>
                       <label className="text-sm font-medium mb-2 block">Permissions</label>
@@ -325,6 +404,11 @@ const AdminUsers = () => {
                         <td className="p-3">
                           {u.suspended ? (
                             <Badge variant="destructive" className="text-xs">Suspended</Badge>
+                          ) : !u.verified && (u.role === "employee" || u.role === "admin") ? (
+                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50 gap-1">
+                              <Clock className="w-3 h-3" />
+                              Pending Approval
+                            </Badge>
                           ) : u.verified ? (
                             <CheckCircle className="w-4 h-4 text-green-500" />
                           ) : (
@@ -348,6 +432,24 @@ const AdminUsers = () => {
                               </Button>
                               {openMenuId === u.id && (
                                 <div className="absolute right-0 top-9 z-20 bg-card border rounded-lg shadow-lg py-1 min-w-[180px]">
+                                  {isAdmin && !u.verified && (u.role === "employee" || u.role === "admin") && (
+                                    <button
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2 text-green-600"
+                                      onClick={() => handleVerifyEmployee(u)}
+                                    >
+                                      <ShieldCheck className="w-3.5 h-3.5" />
+                                      Approve Account
+                                    </button>
+                                  )}
+                                  {isAdmin && u.role === "employee" && (
+                                    <button
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                                      onClick={() => { handleOpenEditPerms(u); setOpenMenuId(null); }}
+                                    >
+                                      <KeyRound className="w-3.5 h-3.5" />
+                                      Edit Permissions
+                                    </button>
+                                  )}
                                   <button
                                     className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
                                     onClick={() => handleSuspend(u)}
@@ -355,7 +457,7 @@ const AdminUsers = () => {
                                     <Ban className="w-3.5 h-3.5" />
                                     {u.suspended ? "Unsuspend" : "Suspend"}
                                   </button>
-                                  {u.role !== "admin" && (
+                                  {isAdmin && u.role !== "admin" && (
                                     <button
                                       className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
                                       onClick={() => handleRoleChange(u, u.role === "employee" ? "admin" : "employee")}
@@ -364,13 +466,15 @@ const AdminUsers = () => {
                                       {u.role === "employee" ? "Promote to Admin" : "Make Employee"}
                                     </button>
                                   )}
-                                  <button
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-red-600 flex items-center gap-2"
-                                    onClick={() => handleDelete(u)}
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    Delete User
-                                  </button>
+                                  {isAdmin && (
+                                    <button
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-red-600 flex items-center gap-2"
+                                      onClick={() => handleDelete(u)}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      Delete User
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -386,6 +490,50 @@ const AdminUsers = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Edit Permissions Modal */}
+        {editPermUser && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEditPermUser(null)}>
+            <Card className="w-full max-w-md" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                    <KeyRound className="w-5 h-5 text-teal-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">Edit Permissions</h2>
+                    <p className="text-sm text-muted-foreground">{editPermUser.name || editPermUser.email}</p>
+                  </div>
+                </div>
+                {permLoading ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">Loading permissions...</p>
+                ) : (
+                  <>
+                    <div className="space-y-2 mb-6">
+                      {PERMISSIONS.map(p => (
+                        <label key={p.id} className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={editPerms.includes(p.id)}
+                            onChange={() => toggleEditPerm(p.id)}
+                            className="rounded"
+                          />
+                          <span className="text-sm font-medium">{p.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                      <Button variant="outline" onClick={() => setEditPermUser(null)}>Cancel</Button>
+                      <Button onClick={handleSavePerms} disabled={permLoading}>
+                        {permLoading ? "Saving..." : "Save Permissions"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

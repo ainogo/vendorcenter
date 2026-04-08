@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { requireRole, type AuthRequest } from "../../middleware/auth.js";
+import { requireRole, requirePermission, type AuthRequest } from "../../middleware/auth.js";
 import { pool } from "../../db/pool.js";
 import { trackActivity } from "../activity/activity.service.js";
 
@@ -40,7 +40,7 @@ adminRouter.get("/stats", requireRole(["admin", "employee"]), async (_req, res, 
 });
 
 // All users list for admin user management
-adminRouter.get("/users", requireRole(["admin"]), async (req, res, next) => {
+adminRouter.get("/users", requireRole(["admin", "employee"]), requirePermission(["users.view"]), async (req, res, next) => {
   try {
     const role = req.query.role as string | undefined;
     let query = "SELECT id, email, role, name, phone, verified, COALESCE(suspended, false) AS suspended, created_at FROM users";
@@ -56,7 +56,7 @@ adminRouter.get("/users", requireRole(["admin"]), async (req, res, next) => {
 });
 
 // All bookings list for admin
-adminRouter.get("/bookings", requireRole(["admin", "employee"]), async (_req, res, next) => {
+adminRouter.get("/bookings", requireRole(["admin", "employee"]), requirePermission(["bookings.view"]), async (_req, res, next) => {
   try {
     const result = await pool.query(`
       SELECT b.id, b.customer_id, b.vendor_id, b.service_name, b.status,
@@ -209,8 +209,8 @@ adminRouter.patch("/users/:id/suspend", requireRole(["admin"]), async (req: Auth
   } catch (err) { next(err); }
 });
 
-// ─── Create employee/sub-admin (admin only) ───────────────────────
-adminRouter.post("/employees", requireRole(["admin"]), async (req: AuthRequest, res, next) => {
+// ─── Create employee/sub-admin (admin or employee with users.view) ─
+adminRouter.post("/employees", requireRole(["admin", "employee"]), requirePermission(["users.view"]), async (req: AuthRequest, res, next) => {
   try {
     const parsed = z.object({
       email: z.string().email(),
@@ -226,6 +226,12 @@ adminRouter.post("/employees", requireRole(["admin"]), async (req: AuthRequest, 
       return;
     }
 
+    // Employees can only create other employees, not admins/sub-admins
+    if (req.actor!.role === "employee" && parsed.data.role !== "employee") {
+      res.status(403).json({ success: false, error: "Employees can only create other employees, not sub-admins" });
+      return;
+    }
+
     // Check email uniqueness for this role
     const existing = await pool.query(
       "SELECT id FROM users WHERE email = $1 AND role = $2 LIMIT 1",
@@ -236,12 +242,16 @@ adminRouter.post("/employees", requireRole(["admin"]), async (req: AuthRequest, 
       return;
     }
 
+    // If created by employee → not verified (needs admin approval)
+    // If created by admin → verified immediately
+    const isVerified = req.actor!.role === "admin";
+
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
     const result = await pool.query(
       `INSERT INTO users (email, role, password_hash, name, phone, verified)
-       VALUES ($1, $2, $3, $4, $5, true)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, email, role, name, phone, verified`,
-      [parsed.data.email, parsed.data.role, passwordHash, parsed.data.name, parsed.data.phone || null]
+      [parsed.data.email, parsed.data.role, passwordHash, parsed.data.name, parsed.data.phone || null, isVerified]
     );
 
     const newUser = result.rows[0];
@@ -264,13 +274,149 @@ adminRouter.post("/employees", requireRole(["admin"]), async (req: AuthRequest, 
 
     trackActivity({
       actorId: req.actor!.id,
-      role: "admin",
+      role: req.actor!.role,
       action: "admin.employee_created",
       entity: "user",
-      metadata: { newUserId: newUser.id, newEmail: parsed.data.email, assignedRole: parsed.data.role },
+      metadata: {
+        newUserId: newUser.id,
+        newEmail: parsed.data.email,
+        assignedRole: parsed.data.role,
+        pendingApproval: !isVerified,
+        createdBy: req.actor!.role,
+      },
     });
 
     res.status(201).json({ success: true, data: newUser });
+  } catch (err) { next(err); }
+});
+
+// ─── Get employee permissions ─────────────────────────────────────
+adminRouter.get("/employees/:id/permissions", requireRole(["admin", "employee"]), async (req: AuthRequest, res, next) => {
+  try {
+    const targetId = req.params.id;
+
+    // Employees can only view their own permissions; admins can view anyone's
+    if (req.actor!.role === "employee" && req.actor!.id !== targetId) {
+      res.status(403).json({ success: false, error: "Employees can only view their own permissions" });
+      return;
+    }
+
+    const result = await pool.query<{ permission: string }>(
+      "SELECT permission FROM employee_permissions WHERE user_id = $1 ORDER BY permission",
+      [targetId]
+    );
+
+    res.json({ success: true, data: result.rows.map(r => r.permission) });
+  } catch (err) { next(err); }
+});
+
+// ─── Update employee permissions (admin only) ─────────────────────
+adminRouter.put("/employees/:id/permissions", requireRole(["admin"]), async (req: AuthRequest, res, next) => {
+  try {
+    const targetId = req.params.id;
+    const parsed = z.object({
+      permissions: z.array(z.string()),
+    }).safeParse(req.body);
+
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: parsed.error.flatten() });
+      return;
+    }
+
+    // Verify target is an employee
+    const target = await pool.query("SELECT id, role, email FROM users WHERE id = $1 LIMIT 1", [targetId]);
+    if (target.rows.length === 0) {
+      res.status(404).json({ success: false, error: "User not found" });
+      return;
+    }
+    if (target.rows[0].role !== "employee") {
+      res.status(400).json({ success: false, error: "Permissions can only be set for employees" });
+      return;
+    }
+
+    // Replace all permissions: delete old, insert new
+    await pool.query("DELETE FROM employee_permissions WHERE user_id = $1", [targetId]);
+    for (const perm of parsed.data.permissions) {
+      await pool.query(
+        "INSERT INTO employee_permissions (user_id, permission) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        [targetId, perm]
+      );
+    }
+
+    trackActivity({
+      actorId: req.actor!.id,
+      role: "admin",
+      action: "admin.permissions_updated",
+      entity: "user",
+      metadata: { targetId, permissions: parsed.data.permissions },
+    });
+
+    res.json({ success: true, data: { permissions: parsed.data.permissions } });
+  } catch (err) { next(err); }
+});
+
+// ─── Verify/approve employee (admin only) ─────────────────────────
+adminRouter.patch("/employees/:id/verify", requireRole(["admin"]), async (req: AuthRequest, res, next) => {
+  try {
+    const targetId = req.params.id;
+
+    const result = await pool.query(
+      "UPDATE users SET verified = true, updated_at = NOW() WHERE id = $1 AND role IN ('employee', 'admin') RETURNING id, email, role, name, verified",
+      [targetId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, error: "Employee not found" });
+      return;
+    }
+
+    trackActivity({
+      actorId: req.actor!.id,
+      role: "admin",
+      action: "admin.employee_verified",
+      entity: "user",
+      metadata: { targetId, email: result.rows[0].email },
+    });
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// ─── Get current user's permissions (for frontend sidebar gating) ─
+adminRouter.get("/me/permissions", requireRole(["admin", "employee"]), async (req: AuthRequest, res, next) => {
+  try {
+    // Admin gets all permissions
+    if (req.actor!.role === "admin") {
+      res.json({
+        success: true,
+        data: {
+          role: "admin",
+          permissions: ["*"],
+          verified: true,
+        },
+      });
+      return;
+    }
+
+    // Check if employee is verified
+    const userResult = await pool.query<{ verified: boolean }>(
+      "SELECT verified FROM users WHERE id = $1 LIMIT 1",
+      [req.actor!.id]
+    );
+
+    const result = await pool.query<{ permission: string }>(
+      "SELECT permission FROM employee_permissions WHERE user_id = $1 ORDER BY permission",
+      [req.actor!.id]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        role: "employee",
+        permissions: result.rows.map(r => r.permission),
+        verified: userResult.rows[0]?.verified ?? false,
+      },
+    });
   } catch (err) { next(err); }
 });
 

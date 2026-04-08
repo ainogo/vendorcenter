@@ -15,6 +15,7 @@ import {
   updateVendorPortfolioUrls,
   listApprovedVendors
 } from "./vendors.repository.js";
+import { setVendorServicePincodes, getVendorServicePincodes } from "../service-zones/service-zones.repository.js";
 
 export const vendorsRouter = Router();
 
@@ -81,6 +82,8 @@ const onboardingSchema = z.object({
   workingHours: z.string().min(3),
   documentUrls: z.array(z.string()).default([]),
   portfolioUrls: z.array(z.string()).default([]),
+  primaryPincode: z.string().regex(/^\d{6}$/).optional(),
+  servicePincodeIds: z.array(z.string().uuid()).default([]),
 });
 
 vendorsRouter.post("/onboarding", requireRole(["vendor"]), async (req: AuthRequest, res) => {
@@ -90,20 +93,27 @@ vendorsRouter.post("/onboarding", requireRole(["vendor"]), async (req: AuthReque
     return;
   }
 
+  const { servicePincodeIds, ...profileData } = parsed.data;
   const profile = await createVendorProfile({
     vendorId: req.actor!.id,
-    ...parsed.data
+    ...profileData
   });
+
+  // Set service pincodes if provided
+  let servicePincodes: any[] = [];
+  if (servicePincodeIds.length > 0) {
+    servicePincodes = await setVendorServicePincodes(req.actor!.id, servicePincodeIds);
+  }
 
   trackActivity({
     actorId: req.actor!.id,
     role: req.actor!.role,
     action: "vendor.onboarding_submitted",
     entity: "vendor",
-    metadata: parsed.data
+    metadata: { ...profileData, servicePincodeCount: servicePincodeIds.length }
   });
 
-  res.status(201).json({ success: true, data: profile });
+  res.status(201).json({ success: true, data: { ...profile, servicePincodes } });
 });
 
 // Vendor: get own profile
@@ -135,7 +145,7 @@ vendorsRouter.patch("/me", requireRole(["vendor"]), async (req: AuthRequest, res
 
   const updated = await updateVendorProfile(req.actor!.id, parsed.data);
   if (!updated) {
-    res.status(403).json({ success: false, error: "Profile has already been edited. No further edits allowed." });
+    res.status(404).json({ success: false, error: "Vendor profile not found." });
     return;
   }
 
@@ -168,6 +178,32 @@ vendorsRouter.patch("/me/portfolio", requireRole(["vendor"]), async (req: AuthRe
   }
 
   res.json({ success: true, data: updated });
+});
+
+// Vendor: get service pincodes
+vendorsRouter.get("/me/service-pincodes", requireRole(["vendor"]), async (req: AuthRequest, res) => {
+  const pincodes = await getVendorServicePincodes(req.actor!.id);
+  res.json({ success: true, data: pincodes });
+});
+
+// Vendor: update service pincodes
+vendorsRouter.put("/me/service-pincodes", requireRole(["vendor"]), async (req: AuthRequest, res) => {
+  const parsed = z.object({
+    pincodeIds: z.array(z.string().uuid()).max(100),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.flatten() });
+    return;
+  }
+  const pincodes = await setVendorServicePincodes(req.actor!.id, parsed.data.pincodeIds);
+  trackActivity({
+    actorId: req.actor!.id,
+    role: req.actor!.role,
+    action: "vendor.service_pincodes_updated",
+    entity: "vendor",
+    metadata: { count: parsed.data.pincodeIds.length },
+  });
+  res.json({ success: true, data: pincodes });
 });
 
 // Public: get vendor detail by vendorId

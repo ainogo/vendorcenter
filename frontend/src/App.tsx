@@ -20,6 +20,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Cookies from "./pages/Cookies";
 import Payment from "./pages/Payment";
+import CustomerAddresses from "./pages/CustomerAddresses";
 import NotFound from "./pages/NotFound";
 import AiAssistantChat from "./components/AiAssistantChat";
 
@@ -44,6 +45,7 @@ function AnimatedRoutes() {
           <Route path="/services" element={<Services />} />
           <Route path="/vendor/:vendorId" element={<VendorDetail />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/addresses" element={<CustomerAddresses />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />

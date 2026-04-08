@@ -30,7 +30,7 @@ interface ActivityItem {
 }
 
 const AdminDashboard = () => {
-  const { user, logout, loading } = useAdminAuth();
+  const { user, logout, loading, hasPermission } = useAdminAuth();
   const navigate = useNavigate();
   const [modules, setModules] = useState<string[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -73,11 +73,12 @@ const AdminDashboard = () => {
     vendors: { icon: Store, color: "text-orange-500", description: "Review, approve, and manage vendor applications", href: "/vendors" },
     users: { icon: Users, color: "text-blue-500", description: "View and manage registered users", href: "/users" },
     zones: { icon: MapPin, color: "text-green-500", description: "Manage service delivery zones", href: "/zones" },
+    "service-zones": { icon: MapPin, color: "text-emerald-500", description: "Hierarchical zone management (State → Zone → Area → Pincode)", href: "/service-zones" },
     services: { icon: ClipboardList, color: "text-purple-500", description: "Browse and moderate services" },
     bookings: { icon: Calendar, color: "text-indigo-500", description: "View platform bookings and disputes", href: "/bookings" },
     payments: { icon: CreditCard, color: "text-pink-500", description: "Monitor payment transactions and refunds" },
     employees: { icon: Users, color: "text-teal-500", description: "Manage employee accounts and zone assignments" },
-    analytics: { icon: BarChart3, color: "text-amber-500", description: "Platform-wide analytics and insights" },
+    analytics: { icon: BarChart3, color: "text-amber-500", description: "Platform-wide analytics and insights", href: "/analytics" },
   };
 
   const formatAction = (action: string) => action.replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
@@ -107,10 +108,11 @@ const AdminDashboard = () => {
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/dashboard" className="text-sm font-medium text-foreground">Dashboard</Link>
-            <Link to="/vendors" className="text-sm font-medium text-muted-foreground hover:text-foreground">Vendors</Link>
-            <Link to="/users" className="text-sm font-medium text-muted-foreground hover:text-foreground">Users</Link>
-            <Link to="/bookings" className="text-sm font-medium text-muted-foreground hover:text-foreground">Bookings</Link>
-            <Link to="/zones" className="text-sm font-medium text-muted-foreground hover:text-foreground">Zones</Link>
+            {hasPermission("vendors.view") && <Link to="/vendors" className="text-sm font-medium text-muted-foreground hover:text-foreground">Vendors</Link>}
+            {hasPermission("users.view") && <Link to="/users" className="text-sm font-medium text-muted-foreground hover:text-foreground">Users</Link>}
+            {hasPermission("bookings.view") && <Link to="/bookings" className="text-sm font-medium text-muted-foreground hover:text-foreground">Bookings</Link>}
+            {hasPermission("zones.manage") && <Link to="/zones" className="text-sm font-medium text-muted-foreground hover:text-foreground">Zones</Link>}
+            {hasPermission("zones.manage") && <Link to="/service-zones" className="text-sm font-medium text-muted-foreground hover:text-foreground">Service Zones</Link>}
           </nav>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden sm:block">{user.email}</span>

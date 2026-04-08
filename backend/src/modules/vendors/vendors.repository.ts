@@ -11,14 +11,15 @@ export interface VendorOnboardingInput {
   workingHours: string;
   documentUrls: string[];
   portfolioUrls: string[];
+  primaryPincode?: string;
 }
 
 export async function createVendorProfile(input: VendorOnboardingInput) {
   const result = await pool.query(
     `INSERT INTO vendor_profiles
-      (vendor_id, business_name, service_categories, latitude, longitude, zone, service_radius_km, working_hours, document_urls, portfolio_urls, verification_status)
-     VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, 'approved')
-     RETURNING id, vendor_id as "vendorId", business_name as "businessName", service_categories as "serviceCategories", latitude, longitude, zone, service_radius_km as "serviceRadiusKm", working_hours as "workingHours", document_urls as "documentUrls", portfolio_urls as "portfolioUrls", verification_status as "verificationStatus", created_at as "createdAt"`,
+      (vendor_id, business_name, service_categories, latitude, longitude, zone, service_radius_km, working_hours, document_urls, portfolio_urls, primary_pincode, verification_status)
+     VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, 'under_review')
+     RETURNING id, vendor_id as "vendorId", business_name as "businessName", service_categories as "serviceCategories", latitude, longitude, zone, service_radius_km as "serviceRadiusKm", working_hours as "workingHours", document_urls as "documentUrls", portfolio_urls as "portfolioUrls", primary_pincode as "primaryPincode", verification_status as "verificationStatus", created_at as "createdAt"`,
     [
       input.vendorId,
       input.businessName,
@@ -30,6 +31,7 @@ export async function createVendorProfile(input: VendorOnboardingInput) {
       input.workingHours,
       JSON.stringify(input.documentUrls),
       JSON.stringify(input.portfolioUrls || []),
+      input.primaryPincode || null,
     ]
   );
 
@@ -285,7 +287,7 @@ export async function updateVendorProfile(vendorId: string, input: Omit<VendorOn
          latitude = $4, longitude = $5, zone = $6,
          service_radius_km = $7, working_hours = $8,
          profile_edited = true, updated_at = NOW()
-     WHERE vendor_id = $1 AND COALESCE(profile_edited, false) = false
+     WHERE vendor_id = $1
      RETURNING id, vendor_id as "vendorId", business_name as "businessName",
               service_categories as "serviceCategories", latitude, longitude, zone,
               service_radius_km as "serviceRadiusKm", working_hours as "workingHours",

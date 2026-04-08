@@ -226,7 +226,7 @@ export const api = {
   },
 
   // Bookings
-  createBooking: (data: { vendorId: string; serviceName: string; scheduledDate?: string; scheduledTime?: string; notes?: string }) =>
+  createBooking: (data: { vendorId: string; serviceName: string; scheduledDate?: string; scheduledTime?: string; notes?: string; addressId?: string; pincode?: string }) =>
     request("/bookings", {
       method: "POST",
       body: JSON.stringify(data),
@@ -293,6 +293,35 @@ export const api = {
 
   // Zones
   getZones: () => request<any[]>("/zones"),
+
+  // Service Zones (new hierarchy)
+  checkServiceability: (pincode: string) =>
+    request<any>(`/service-zones/check?pincode=${encodeURIComponent(pincode)}`),
+
+  getServiceZoneHierarchy: () => request<any>("/service-zones/hierarchy"),
+
+  // Customer Addresses
+  getAddresses: () => request<any[]>("/addresses"),
+
+  getAddress: (id: string) => request<any>(`/addresses/${encodeURIComponent(id)}`),
+
+  createAddress: (data: { label: string; fullAddress: string; pincode: string; city?: string; state?: string; latitude?: number; longitude?: number }) =>
+    request<any>("/addresses", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateAddress: (id: string, data: { label?: string; fullAddress?: string; pincode?: string; city?: string; state?: string; latitude?: number; longitude?: number }) =>
+    request<any>(`/addresses/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteAddress: (id: string) =>
+    request(`/addresses/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  setDefaultAddress: (id: string) =>
+    request(`/addresses/${encodeURIComponent(id)}/default`, { method: "PATCH" }),
 
   getTopCategoriesByLocation: (lat: number, lng: number, radiusKm = 25, limit = 6) => {
     const params = new URLSearchParams({

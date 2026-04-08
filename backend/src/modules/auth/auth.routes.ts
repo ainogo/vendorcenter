@@ -107,6 +107,11 @@ authRouter.post("/login", async (req, res) => {
       return;
     }
 
+    if (user.role === "employee" && !user.verified) {
+      res.status(403).json({ success: false, error: "Your account is pending admin approval. Please contact your administrator." });
+      return;
+    }
+
     if (!user.password_hash) {
       res.status(401).json({ success: false, error: "This account uses phone login. Please sign in with your phone number." });
       return;
@@ -520,6 +525,16 @@ authRouter.post("/phone-login", async (req, res) => {
           metadata: { phone: normalizedPhone, provider: "firebase" },
         });
       }
+    }
+
+    if (user.suspended) {
+      res.status(403).json({ success: false, error: "Your account has been suspended. Contact support." });
+      return;
+    }
+
+    if (user.role === "employee" && !user.verified) {
+      res.status(403).json({ success: false, error: "Your account is pending admin approval. Please contact your administrator." });
+      return;
     }
 
     // Issue our JWT tokens

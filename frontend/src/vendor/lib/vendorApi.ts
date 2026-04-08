@@ -170,6 +170,8 @@ export const vendorApi = {
     workingHours: string;
     documentUrls?: string[];
     portfolioUrls?: string[];
+    primaryPincode?: string;
+    servicePincodeIds?: string[];
   }) =>
     request("/vendors/onboarding", {
       method: "POST",
@@ -191,6 +193,23 @@ export const vendorApi = {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
+
+  // Service zones
+  getServiceZoneHierarchy: () => request<any>("/service-zones/hierarchy"),
+
+  getServicePincodes: () => request<any[]>("/vendors/me/service-pincodes"),
+
+  updateServicePincodes: (pincodeIds: string[]) =>
+    request<any>("/vendors/me/service-pincodes", {
+      method: "PUT",
+      body: JSON.stringify({ pincodeIds }),
+    }),
+
+  checkServiceability: (pincode: string) =>
+    request<any>(`/service-zones/check?pincode=${encodeURIComponent(pincode)}`),
+
+  lookupPincode: (pincode: string) =>
+    request<any>(`/service-zones/lookup-pincode/${encodeURIComponent(pincode)}`),
 
   updateVendorPortfolio: (portfolioUrls: string[]) =>
     request<any>("/vendors/me/portfolio", {
