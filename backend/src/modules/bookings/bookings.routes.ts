@@ -25,6 +25,7 @@ import { findUserById } from "../auth/auth.repository.js";
 import { generateBookingReceipt } from "../../services/pdfService.js";
 import { getVendorProfile } from "../vendors/vendors.repository.js";
 import { checkServiceability, vendorServesPincode } from "../service-zones/service-zones.repository.js";
+import { createNotification } from "../notifications/notifications.repository.js";
 
 const statusSchema = z.enum(["pending", "confirmed", "in_progress", "completed", "cancelled"]);
 
@@ -56,11 +57,17 @@ bookingsRouter.post("/", requireRole(["customer"]), async (req: AuthRequest, res
       return;
     }
 
-    // Check if the specific vendor covers this pincode
+    // Check if the specific vendor covers this pincode (skip if vendor hasn't set up pincodes yet)
     const vendorCovers = await vendorServesPincode(parsed.data.vendorId, parsed.data.pincode);
     if (!vendorCovers) {
-      res.status(400).json({ success: false, error: "This vendor does not provide services in your pincode area." });
-      return;
+      // Check if vendor has ANY pincodes configured — if not, allow booking (vendor hasn't onboarded zones yet)
+      const { pool } = await import("../../db/pool.js");
+      const vpCheck = await pool.query("SELECT 1 FROM vendor_service_pincodes WHERE vendor_id = $1 LIMIT 1", [parsed.data.vendorId]);
+      if ((vpCheck.rowCount ?? 0) > 0) {
+        res.status(400).json({ success: false, error: "This vendor does not provide services in your pincode area." });
+        return;
+      }
+      // Vendor has no pincode config yet — allow booking
     }
   }
 
@@ -82,6 +89,21 @@ bookingsRouter.post("/", requireRole(["customer"]), async (req: AuthRequest, res
     entity: "booking",
     metadata: { bookingId: booking.id, vendorId: booking.vendorId }
   });
+
+  // Notify vendor about the new booking
+  try {
+    const customer = await findUserById(req.actor!.id);
+    await createNotification({
+      recipientId: booking.vendorId,
+      recipientRole: "vendor",
+      category: "booking",
+      title: "New Booking Request",
+      message: `${customer?.name || "A customer"} has booked "${booking.serviceName}" for ${booking.scheduledDate || "unscheduled"}.`,
+      payload: { bookingId: booking.id, serviceName: booking.serviceName, customerId: req.actor!.id },
+    });
+  } catch (_notifErr) {
+    // Non-critical: don't fail booking if notification insert fails
+  }
 
   // No email at creation. Customer gets booking confirmation only after vendor accepts.
 
@@ -113,6 +135,23 @@ bookingsRouter.patch("/:bookingId/status", requireRole(["vendor", "admin", "empl
     entity: "booking",
     metadata: { bookingId: booking.id, status: booking.status }
   });
+
+  // Notify customer about the status change
+  try {
+    const statusLabels: Record<string, string> = {
+      confirmed: "Confirmed",
+      in_progress: "In Progress",
+      completed: "Completed",
+    };
+    await createNotification({
+      recipientId: booking.customerId,
+      recipientRole: "customer",
+      category: "booking",
+      title: `Booking ${statusLabels[booking.status] || booking.status}`,
+      message: `Your booking for "${booking.serviceName}" has been ${statusLabels[booking.status]?.toLowerCase() || booking.status}.`,
+      payload: { bookingId: booking.id, status: booking.status },
+    });
+  } catch (_) {}
 
   // Send confirmation email to customer when vendor confirms the booking
   if (parsed.data.status === "confirmed") {

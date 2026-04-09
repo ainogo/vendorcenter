@@ -54,6 +54,10 @@ model/notebooks/*.ipynb
 # Screenshots / debug artifacts (not for repo)
 *.png
 !frontend/public/og-image.png
+!frontend/public/apple-touch-icon.png
+!frontend/public/favicon-48.png
+!frontend/public/icon-192.png
+!frontend/public/icon-512.png
 hero-console-errors.txt
 amazon-homepage.md
 amazon-nav.md

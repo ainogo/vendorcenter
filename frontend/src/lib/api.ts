@@ -144,6 +144,9 @@ export const api = {
     return request("/auth/logout", {
       method: "POST",
       body: JSON.stringify({ refreshToken }),
+    }).finally(() => {
+      localStorage.removeItem("customer_accessToken");
+      localStorage.removeItem("customer_refreshToken");
     });
   },
 

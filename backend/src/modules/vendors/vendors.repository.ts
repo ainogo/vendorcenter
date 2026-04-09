@@ -209,6 +209,10 @@ export async function listApprovedVendors(lat?: number, lng?: number, radiusKm =
   }
 
   query += ` ORDER BY rating DESC`;
+  // Safety cap: limit results when no geo filter is applied
+  if (lat == null || lng == null) {
+    query += ` LIMIT 20`;
+  }
   const result = await pool.query(query, params);
   return result.rows;
 }

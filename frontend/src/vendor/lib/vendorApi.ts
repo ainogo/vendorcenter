@@ -121,6 +121,9 @@ export const vendorApi = {
     return request("/auth/logout", {
       method: "POST",
       body: JSON.stringify({ refreshToken }),
+    }).finally(() => {
+      localStorage.removeItem("vendor_accessToken");
+      localStorage.removeItem("vendor_refreshToken");
     });
   },
 

@@ -39,6 +39,9 @@ const _en = <String, String>{
   'home.stat_vendors': 'Active Vendors',
   'home.stat_customers': 'Happy Customers',
   'home.stat_jobs': 'Jobs Done',
+  'home.set_location_title': 'Set your location',
+  'home.set_location_sub': 'Select your area to find nearby vendors',
+  'home.set_location_btn': 'Set Location',
 
   // ── Search ──
   'search.title': 'Search',
@@ -160,6 +163,9 @@ const _mr = <String, String>{
   'home.stat_vendors': 'सक्रिय विक्रेते',
   'home.stat_customers': 'आनंदी ग्राहक',
   'home.stat_jobs': 'पूर्ण झालेली कामे',
+  'home.set_location_title': 'तुमचे स्थान निवडा',
+  'home.set_location_sub': 'जवळचे सेवा प्रदाता शोधण्यासाठी तुमचे क्षेत्र निवडा',
+  'home.set_location_btn': 'स्थान निवडा',
 
   // ── शोध ──
   'search.title': 'शोधा',

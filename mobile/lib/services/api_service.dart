@@ -514,7 +514,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateAddress(String id, Map<String, dynamic> data) async {
-    final res = await _dio.put('/addresses/$id', data: data);
+    final res = await _dio.patch('/addresses/$id', data: data);
     return res.data['data'] ?? {};
   }
 
@@ -523,7 +523,7 @@ class ApiService {
   }
 
   Future<void> setDefaultAddress(String id) async {
-    await _dio.put('/addresses/$id/default');
+    await _dio.patch('/addresses/$id/default');
   }
 
   // ─── Service Zones & Serviceability ────────────

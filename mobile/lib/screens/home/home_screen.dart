@@ -101,17 +101,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _hasMoreVendors = true;
     try {
       final loc = context.read<LocationService>();
-      final results = await Future.wait([
+      final hasLoc = loc.lat != null && loc.lng != null;
+      final futures = <Future>[
         _api.getCategories(lat: loc.lat, lng: loc.lng),
-        _api.getApprovedVendorsPaginated(lat: loc.lat, lng: loc.lng, page: 1, limit: 10),
+        if (hasLoc)
+          _api.getApprovedVendorsPaginated(lat: loc.lat, lng: loc.lng, page: 1, limit: 10),
         _api.getPublicStats(),
-      ]);
+      ];
+      final results = await Future.wait(futures);
       if (mounted) {
-        final vendors = results[1] as List;
+        final vendors = hasLoc ? (results[1] as List) : <dynamic>[];
         setState(() {
           _categories = results[0] as List;
           _vendors = vendors;
-          _stats = results[2] as Map<String, dynamic>;
+          _stats = (hasLoc ? results[2] : results[1]) as Map<String, dynamic>;
           _loading = false;
           _hasMoreVendors = vendors.length >= 10;
         });
@@ -229,6 +232,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: VendorCard(vendor: _vendors[i]),
               ),
             ),
+          ),
+        ] else if (!context.watch<LocationService>().hasLocation) ...[
+          SliverToBoxAdapter(
+            child: _buildLocationPrompt(),
           ),
           if (_loadingMore)
             const SliverToBoxAdapter(
@@ -366,6 +373,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (hour < 12) return context.tr('home.greeting_morning');
     if (hour < 17) return context.tr('home.greeting_afternoon');
     return context.tr('home.greeting_evening');
+  }
+
+  // ── Location prompt ───────────────────────────────────────────
+
+  Widget _buildLocationPrompt() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAltOf(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.location_on_outlined, size: 40, color: AppColors.primary),
+            const SizedBox(height: 12),
+            Text(
+              context.tr('home.set_location_title'),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textOf(context)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              context.tr('home.set_location_sub'),
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondaryOf(context)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => LocationPickerSheet.show(context),
+                icon: const Icon(Icons.my_location_rounded, size: 18),
+                label: Text(context.tr('home.set_location_btn')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Search bar ────────────────────────────────────────────────

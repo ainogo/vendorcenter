@@ -11,11 +11,11 @@ class BookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = (booking['status'] ?? 'pending').toString();
-    final vendorName = booking['vendor_business_name'] ?? booking['vendor_name'] ?? 'Vendor';
-    final serviceName = booking['service_name'] ?? 'Service';
-    final amount = booking['total_amount']?.toString() ?? '0';
-    final date = booking['preferred_date']?.toString() ?? '';
-    final time = booking['preferred_time']?.toString() ?? '';
+    final vendorName = booking['vendorName'] ?? booking['vendor_business_name'] ?? booking['vendor_name'] ?? 'Vendor';
+    final serviceName = booking['serviceName'] ?? booking['service_name'] ?? 'Service';
+    final amount = (booking['finalAmount'] ?? booking['total_amount'] ?? 0).toString();
+    final date = (booking['scheduledDate'] ?? booking['preferred_date'] ?? '').toString();
+    final time = (booking['scheduledTime'] ?? booking['preferred_time'] ?? '').toString();
 
     String displayDate = date;
     try {

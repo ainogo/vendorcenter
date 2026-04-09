@@ -38,6 +38,7 @@ const CTASection = () => {
           {/* For Vendors */}
           <div
             ref={rightRef}
+            data-nosnippet
             className="relative overflow-hidden p-8 md:p-10 rounded-3xl bg-card border-2 border-primary/20 cursor-glow group"
           >
             <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-primary/10 blur-2xl transition-transform duration-500 group-hover:scale-150" />
