@@ -159,8 +159,8 @@ class _VendorAvailabilityScreenState extends State<VendorAvailabilityScreen> {
 
     try {
       final dateStr = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      await _api.addBlockedDate(dateStr, reason: reason.isNotEmpty ? reason : null);
-      _blockedDates.add(_BlockedDate(date: picked, reason: reason));
+      await _api.addBlockedDate(dateStr, reason: (reason != null && reason.isNotEmpty) ? reason : null);
+      _blockedDates.add(_BlockedDate(date: picked, reason: reason ?? ''));
       setState(() {});
     } catch (e) {
       if (mounted) {
