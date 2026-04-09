@@ -18,6 +18,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
   Map<String, dynamic> _stats = {};
   bool _loading = true;
   String? _error;
+  bool _needsOnboarding = false;
 
   @override
   void initState() {
@@ -32,6 +33,13 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
       if (mounted) setState(() => _stats = data);
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not load dashboard. Pull to retry.');
+    }
+    // Check if vendor profile exists
+    try {
+      await _api.getVendorProfile();
+      if (mounted) setState(() => _needsOnboarding = false);
+    } catch (_) {
+      if (mounted) setState(() => _needsOnboarding = true);
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -70,6 +78,44 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
               style: TextStyle(color: AppColors.textSecondaryOf(context)),
             ),
             const SizedBox(height: 20),
+
+            // Onboarding banner
+            if (_needsOnboarding)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [AppColors.vendor.withValues(alpha: 0.1), AppColors.vendor.withValues(alpha: 0.05)]),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.vendor.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.rocket_launch_rounded, color: AppColors.vendor, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Complete Your Profile', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textOf(context))),
+                          const SizedBox(height: 2),
+                          Text('Set up your business details to start receiving bookings', style: TextStyle(fontSize: 12, color: AppColors.textSecondaryOf(context))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () => context.push('/onboarding'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.vendor,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Setup', style: TextStyle(fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
 
             // Stats cards
             if (_error != null)
@@ -190,8 +236,8 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
   Widget _buildLoadingCards() {
     final isDark = AppColors.isDark(context);
     return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
-      highlightColor: isDark ? const Color(0xFF3A3A3A) : Colors.grey.shade50,
+      baseColor: isDark ? AppColors.darkSurfaceAlt : Colors.grey.shade200,
+      highlightColor: isDark ? AppColors.darkBorder : Colors.grey.shade50,
       child: GridView.count(
         crossAxisCount: 2,
         shrinkWrap: true,

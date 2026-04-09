@@ -44,8 +44,9 @@ export async function countZones() {
 }
 
 export async function countActiveCities() {
+  // Count distinct zone names from the hierarchical service_zones table (admin-managed)
   const result = await pool.query<{ total: string }>(
-    "SELECT COUNT(DISTINCT LOWER(city))::text as total FROM zones WHERE active = true"
+    "SELECT COUNT(DISTINCT LOWER(z.name))::text as total FROM service_zones z WHERE z.active = true"
   );
   return Number(result.rows[0]?.total ?? "0");
 }

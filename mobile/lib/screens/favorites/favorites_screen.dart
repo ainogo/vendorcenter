@@ -35,7 +35,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     try {
       final allVendors = await _api.getApprovedVendors();
       final favIds = favService.ids;
-      _vendors = allVendors.where((v) => favIds.contains(v['id']?.toString())).toList();
+      _vendors = allVendors.where((v) {
+        final vid = v['vendorId']?.toString() ?? v['id']?.toString() ?? '';
+        return favIds.contains(vid);
+      }).toList();
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }
@@ -43,13 +46,18 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   Widget build(BuildContext context) {
     // Re-render when favorites change
-    context.watch<FavoritesService>();
+    final favService = context.watch<FavoritesService>();
+    // Live-filter: remove unfavorited vendors without re-fetching
+    final displayed = _vendors.where((v) {
+      final vid = v['vendorId']?.toString() ?? v['id']?.toString() ?? '';
+      return favService.isFavorite(vid);
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Saved Vendors')),
       body: _loading
           ? _buildShimmer()
-          : _vendors.isEmpty
+          : displayed.isEmpty
               ? _buildEmpty()
               : RefreshIndicator(
                   onRefresh: () async {
@@ -58,10 +66,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   },
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: _vendors.length,
+                    itemCount: displayed.length,
                     itemBuilder: (_, i) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: VendorCard(vendor: _vendors[i]),
+                      child: VendorCard(vendor: displayed[i]),
                     ),
                   ),
                 ),
@@ -103,8 +111,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget _buildShimmer() {
     final isDark = AppColors.isDark(context);
     return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
-      highlightColor: isDark ? const Color(0xFF3A3A3A) : Colors.grey.shade50,
+      baseColor: isDark ? AppColors.darkSurfaceAlt : Colors.grey.shade200,
+      highlightColor: isDark ? AppColors.darkBorder : Colors.grey.shade50,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: List.generate(

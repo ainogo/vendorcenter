@@ -38,7 +38,7 @@ android {
         create("vendor") {
             dimension = "app"
             applicationId = "com.vendorcenter.vendor"
-            resValue("string", "app_name", "LocalVendors")
+            resValue("string", "app_name", "VendorPortal")
         }
     }
 

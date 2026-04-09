@@ -292,9 +292,40 @@ class ApiService {
     return res.data['data'] ?? {};
   }
 
+  Future<Map<String, dynamic>> submitVendorOnboarding(Map<String, dynamic> data) async {
+    final res = await _dio.post('/vendors/onboarding', data: data);
+    return res.data['data'] ?? {};
+  }
+
   Future<Map<String, dynamic>> updateVendorProfile(Map<String, dynamic> data) async {
     final res = await _dio.patch('/vendors/me', data: data);
     return res.data['data'] ?? {};
+  }
+
+  // ─── Availability ──────────────────────────────
+
+  Future<Map<String, dynamic>> getVendorAvailability() async {
+    final res = await _dio.get('/vendors/me/availability');
+    return res.data['data'] ?? {};
+  }
+
+  Future<List<dynamic>> setVendorAvailability(List<Map<String, dynamic>> slots) async {
+    final res = await _dio.put('/vendors/me/availability', data: {'slots': slots});
+    return res.data['data'] ?? [];
+  }
+
+  Future<Map<String, dynamic>> addBlockedDate(String date, {String? reason}) async {
+    final res = await _dio.post('/vendors/me/blocked-dates', data: {'date': date, 'reason': reason});
+    return res.data['data'] ?? {};
+  }
+
+  Future<void> removeBlockedDate(String date) async {
+    await _dio.delete('/vendors/me/blocked-dates/$date');
+  }
+
+  Future<List<dynamic>> getAvailableSlots(String vendorId, String date) async {
+    final res = await _dio.get('/vendors/$vendorId/available-slots', queryParameters: {'date': date});
+    return res.data['data'] ?? [];
   }
 
   Future<Map<String, dynamic>> getVendorReviewStats() async {

@@ -75,21 +75,21 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Widget _buildContent() {
     final b = _booking!;
     final status = (b['status'] ?? 'pending').toString().toLowerCase();
-    final dateStr = b['preferred_date']?.toString() ?? b['scheduled_date']?.toString() ?? '';
-    final timeStr = b['preferred_time']?.toString() ?? b['scheduled_time']?.toString() ?? '';
-    final totalAmount = b['total_amount']?.toString() ?? '0';
-    final rawFinal = b['final_amount'];
+    final dateStr = b['scheduledDate']?.toString() ?? b['preferred_date']?.toString() ?? b['scheduled_date']?.toString() ?? '';
+    final timeStr = b['scheduledTime']?.toString() ?? b['preferred_time']?.toString() ?? b['scheduled_time']?.toString() ?? '';
+    final totalAmount = b['finalAmount']?.toString() ?? b['total_amount']?.toString() ?? '0';
+    final rawFinal = b['finalAmount'] ?? b['final_amount'];
     final finalAmount = rawFinal != null ? '${(num.tryParse(rawFinal.toString()) ?? 0) / 100}' : null;
     final displayAmount = finalAmount ?? totalAmount;
-    final vendorName = b['vendor_business_name'] ?? b['vendor_name'] ?? 'Vendor';
-    final serviceName = b['service_name'] ?? 'Service';
+    final vendorName = b['vendorName'] ?? b['vendor_business_name'] ?? b['vendor_name'] ?? 'Vendor';
+    final serviceName = b['serviceName'] ?? b['service_name'] ?? 'Service';
     final notes = b['notes']?.toString() ?? '';
-    final createdAt = b['created_at']?.toString() ?? '';
-    final paymentStatus = (b['payment_status']?.toString() ?? '').toLowerCase();
-    final workStartedAt = b['work_started_at']?.toString() ?? '';
-    final completionRequested = b['completion_requested_at'] != null;
-    final rejectionReason = b['rejection_reason']?.toString() ?? '';
-    final transactionId = b['transaction_id']?.toString() ?? '';
+    final createdAt = b['createdAt']?.toString() ?? b['created_at']?.toString() ?? '';
+    final paymentStatus = (b['paymentStatus']?.toString() ?? b['payment_status']?.toString() ?? '').toLowerCase();
+    final workStartedAt = b['workStartedAt']?.toString() ?? b['work_started_at']?.toString() ?? '';
+    final completionRequested = (b['completionRequestedAt'] ?? b['completion_requested_at']) != null;
+    final rejectionReason = b['rejectionReason']?.toString() ?? b['rejection_reason']?.toString() ?? '';
+    final transactionId = b['transactionId']?.toString() ?? b['transaction_id']?.toString() ?? '';
 
     String formattedDate = dateStr;
     try {
@@ -200,7 +200,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () {
-                final vendorId = b['vendor_id']?.toString();
+                final vendorId = b['vendorId']?.toString() ?? b['vendor_id']?.toString();
                 if (vendorId != null) context.push('/review/$vendorId/${b['id']}');
               },
               icon: const Icon(Icons.rate_review_outlined),
@@ -306,8 +306,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Widget _buildShimmer() {
     final isDark = AppColors.isDark(context);
     return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
-      highlightColor: isDark ? const Color(0xFF3A3A3A) : Colors.grey.shade50,
+      baseColor: isDark ? AppColors.darkSurfaceAlt : Colors.grey.shade200,
+      highlightColor: isDark ? AppColors.darkBorder : Colors.grey.shade50,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

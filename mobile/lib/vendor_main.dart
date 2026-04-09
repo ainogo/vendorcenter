@@ -79,7 +79,7 @@ class _VendorAppEntryState extends State<_VendorAppEntry> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: ThemeData(scaffoldBackgroundColor: const Color(0xFF2563EB)),
-        home: const SplashScreen(),
+        home: const SplashScreen(isVendor: true),
       );
     }
     return const VendorApp();

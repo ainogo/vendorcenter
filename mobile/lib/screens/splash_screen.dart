@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final bool isVendor;
+  const SplashScreen({super.key, this.isVendor = false});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -137,9 +138,9 @@ class _SplashScreenState extends State<SplashScreen>
                       offset: Offset(0, _textSlide.value),
                       child: Opacity(
                         opacity: _textOpacity.value,
-                        child: const Text(
-                          'VendorCenter',
-                          style: TextStyle(
+                        child: Text(
+                          widget.isVendor ? 'VendorPortal' : 'VendorCenter',
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,

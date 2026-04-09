@@ -26,6 +26,11 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   bool _loading = true;
   bool _submitting = false;
 
+  // Slots
+  List<dynamic> _availableSlots = [];
+  bool _loadingSlots = false;
+  String? _selectedSlotTime;
+
   // Address
   List<dynamic> _addresses = [];
   String? _selectedAddressId;
@@ -37,6 +42,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     super.initState();
     _loadVendorData();
     _loadAddresses();
+    _loadSlots();
   }
 
   @override
@@ -90,7 +96,29 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 90)),
     );
-    if (date != null && mounted) setState(() => _selectedDate = date);
+    if (date != null && mounted) {
+      setState(() {
+        _selectedDate = date;
+        _selectedSlotTime = null;
+      });
+      _loadSlots();
+    }
+  }
+
+  Future<void> _loadSlots() async {
+    setState(() => _loadingSlots = true);
+    try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final slots = await _api.getAvailableSlots(widget.vendorId, dateStr);
+      if (mounted) {
+        setState(() {
+          _availableSlots = slots;
+          _loadingSlots = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _availableSlots = []; _loadingSlots = false; });
+    }
   }
 
   Future<void> _pickTime() async {
@@ -124,7 +152,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
     setState(() => _submitting = true);
     try {
-      final timeStr = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      final timeStr = _selectedSlotTime ?? '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
       await _api.createBooking(
         vendorId: widget.vendorId,
         serviceName: _selectedService['name']?.toString() ?? '',
@@ -338,27 +366,55 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Time picker
+          // Time slot selector
           const Text('Preferred Time', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          InkWell(
-            onTap: _pickTime,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.access_time, size: 18, color: AppColors.primary),
-                  const SizedBox(width: 10),
-                  Text(_selectedTime.format(context)),
-                ],
+          if (_loadingSlots)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+            )
+          else if (_availableSlots.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _availableSlots.map<Widget>((s) {
+                final time = s['time']?.toString() ?? '';
+                final booked = s['booked'] == true;
+                final selected = _selectedSlotTime == time;
+                return ChoiceChip(
+                  label: Text(time),
+                  selected: selected,
+                  onSelected: booked ? null : (v) => setState(() => _selectedSlotTime = v ? time : null),
+                  selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                  disabledColor: Colors.grey.shade200,
+                  labelStyle: TextStyle(
+                    color: booked ? Colors.grey : (selected ? AppColors.primary : null),
+                    decoration: booked ? TextDecoration.lineThrough : null,
+                  ),
+                );
+              }).toList(),
+            )
+          else
+            // Fallback to manual time picker when vendor has no slots configured
+            InkWell(
+              onTap: _pickTime,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.access_time, size: 18, color: AppColors.primary),
+                    const SizedBox(width: 10),
+                    Text(_selectedTime.format(context)),
+                  ],
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 16),
 
           // Notes

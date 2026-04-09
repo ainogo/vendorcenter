@@ -265,3 +265,24 @@ CREATE TABLE IF NOT EXISTS faq_embeddings (
   lang TEXT NOT NULL DEFAULT 'en',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ═══ Vendor Availability ═══
+CREATE TABLE IF NOT EXISTS vendor_weekly_slots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_id TEXT NOT NULL,
+  day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  start_time TEXT NOT NULL,
+  end_time TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(vendor_id, day_of_week, start_time)
+);
+
+CREATE TABLE IF NOT EXISTS vendor_blocked_dates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_id TEXT NOT NULL,
+  blocked_date DATE NOT NULL,
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(vendor_id, blocked_date)
+);

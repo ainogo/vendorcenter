@@ -9,7 +9,10 @@ import 'package:vendorcenter/screens/vendor/vendor_services_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_profile_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_earnings_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_reviews_screen.dart';
-import 'package:vendorcenter/screens/profile/edit_profile_screen.dart';
+import 'package:vendorcenter/screens/vendor/vendor_edit_profile_screen.dart';
+import 'package:vendorcenter/screens/vendor/vendor_onboarding_screen.dart';
+import 'package:vendorcenter/screens/vendor/vendor_availability_screen.dart';
+import 'package:vendorcenter/screens/auth/forgot_password_screen.dart';
 
 GoRouter createVendorRouter(AuthService auth) {
   return GoRouter(
@@ -17,7 +20,7 @@ GoRouter createVendorRouter(AuthService auth) {
     refreshListenable: auth,
     redirect: (context, state) {
       final loggedIn = auth.isLoggedIn;
-      final isPublic = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final isPublic = state.matchedLocation == '/login' || state.matchedLocation == '/register' || state.matchedLocation == '/forgot-password';
 
       if (!loggedIn && !isPublic) return '/login';
       if (loggedIn && isPublic) return '/dashboard';
@@ -31,6 +34,14 @@ GoRouter createVendorRouter(AuthService auth) {
       GoRoute(
         path: '/register',
         builder: (_, __) => const VendorRegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (_, __) => const VendorOnboardingScreen(),
       ),
       ShellRoute(
         builder: (_, state, child) => VendorShellScreen(child: child),
@@ -55,7 +66,7 @@ GoRouter createVendorRouter(AuthService auth) {
       ),
       GoRoute(
         path: '/profile/edit',
-        builder: (_, __) => const EditProfileScreen(),
+        builder: (_, __) => const VendorEditProfileScreen(),
       ),
       GoRoute(
         path: '/earnings',
@@ -64,6 +75,10 @@ GoRouter createVendorRouter(AuthService auth) {
       GoRoute(
         path: '/reviews',
         builder: (_, __) => const VendorReviewsScreen(),
+      ),
+      GoRoute(
+        path: '/availability',
+        builder: (_, __) => const VendorAvailabilityScreen(),
       ),
     ],
   );

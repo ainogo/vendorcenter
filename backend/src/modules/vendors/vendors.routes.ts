@@ -16,6 +16,11 @@ import {
   listApprovedVendors
 } from "./vendors.repository.js";
 import { setVendorServicePincodes, getVendorServicePincodes } from "../service-zones/service-zones.repository.js";
+import {
+  getWeeklySlots, setWeeklySlots,
+  getBlockedDates, addBlockedDate, removeBlockedDate,
+  getAvailableSlots,
+} from "./availability.repository.js";
 
 export const vendorsRouter = Router();
 
@@ -178,6 +183,67 @@ vendorsRouter.patch("/me/portfolio", requireRole(["vendor"]), async (req: AuthRe
   }
 
   res.json({ success: true, data: updated });
+});
+
+// ─── Availability ──────────────────────────────
+
+// Vendor: get own weekly slots + blocked dates
+vendorsRouter.get("/me/availability", requireRole(["vendor"]), async (req: AuthRequest, res) => {
+  const [slots, blocked] = await Promise.all([
+    getWeeklySlots(req.actor!.id),
+    getBlockedDates(req.actor!.id),
+  ]);
+  res.json({ success: true, data: { slots, blockedDates: blocked } });
+});
+
+// Vendor: set weekly slots (replaces all)
+vendorsRouter.put("/me/availability", requireRole(["vendor"]), async (req: AuthRequest, res) => {
+  const parsed = z.object({
+    slots: z.array(z.object({
+      dayOfWeek: z.number().int().min(0).max(6),
+      startTime: z.string().regex(/^\d{2}:\d{2}$/),
+      endTime: z.string().regex(/^\d{2}:\d{2}$/),
+    })).max(28),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.flatten() });
+    return;
+  }
+  const slots = await setWeeklySlots(req.actor!.id, parsed.data.slots);
+  res.json({ success: true, data: slots });
+});
+
+// Vendor: add blocked date
+vendorsRouter.post("/me/blocked-dates", requireRole(["vendor"]), async (req: AuthRequest, res) => {
+  const parsed = z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    reason: z.string().max(200).optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.flatten() });
+    return;
+  }
+  const blocked = await addBlockedDate(req.actor!.id, parsed.data.date, parsed.data.reason);
+  res.json({ success: true, data: blocked });
+});
+
+// Vendor: remove blocked date
+vendorsRouter.delete("/me/blocked-dates/:date", requireRole(["vendor"]), async (req: AuthRequest, res) => {
+  await removeBlockedDate(req.actor!.id, req.params.date);
+  res.json({ success: true });
+});
+
+// Public: get available slots for a vendor on a date
+vendorsRouter.get("/:vendorId/available-slots", async (req, res) => {
+  const parsed = z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }).safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: "date query param required (YYYY-MM-DD)" });
+    return;
+  }
+  const slots = await getAvailableSlots(req.params.vendorId, parsed.data.date);
+  res.json({ success: true, data: slots });
 });
 
 // Vendor: get service pincodes

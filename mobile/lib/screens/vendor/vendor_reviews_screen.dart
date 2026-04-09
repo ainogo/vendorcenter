@@ -280,8 +280,8 @@ class _VendorReviewsScreenState extends State<VendorReviewsScreen> {
   Widget _buildShimmer() {
     final isDark = AppColors.isDark(context);
     return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
-      highlightColor: isDark ? const Color(0xFF3A3A3A) : Colors.grey.shade50,
+      baseColor: isDark ? AppColors.darkSurfaceAlt : Colors.grey.shade200,
+      highlightColor: isDark ? AppColors.darkBorder : Colors.grey.shade50,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: List.generate(

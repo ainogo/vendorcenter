@@ -592,9 +592,9 @@ const VendorLogin = () => {
           {/* Customer login link */}
           <div className="mt-4 pt-4 border-t border-border/40">
             <p className="text-center text-sm text-muted-foreground">
-              Looking for customer login?{" "}
+              {t("login.lookingForCustomerLogin")}{" "}
               <a href="/login" className="text-orange-600 hover:underline font-medium">
-                Sign in as Customer →
+                {t("login.signInAsCustomer")}
               </a>
             </p>
           </div>

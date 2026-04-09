@@ -57,8 +57,8 @@ class AdaptiveShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
     return ShimmerWrap(
-      baseColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0),
-      highlightColor: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFF5F5F5),
+      baseColor: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFE0E0E0),
+      highlightColor: isDark ? AppColors.darkBorder : const Color(0xFFF5F5F5),
       child: child,
     );
   }

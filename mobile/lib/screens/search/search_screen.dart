@@ -23,6 +23,7 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _activeCategory;
   bool _loading = true;
   bool _searching = false;
+  bool _hasSearched = false;
 
   @override
   void initState() {
@@ -55,9 +56,9 @@ class _SearchScreenState extends State<SearchScreen> {
           _categories = cats;
           _loading = false;
         });
-        // If no category selected, load all vendors
-        if (_activeCategory == null && _vendors.isEmpty) {
-          _loadAllVendors();
+        // If category was pre-selected via route, load vendors for it
+        if (_activeCategory != null) {
+          _loadVendors(_activeCategory!);
         }
       }
     } catch (e) {
@@ -66,7 +67,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _loadAllVendors() async {
-    setState(() => _searching = true);
+    setState(() { _searching = true; _hasSearched = true; });
     try {
       final loc = context.read<LocationService>();
       final vendors = await _api.getApprovedVendors(
@@ -80,7 +81,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _loadVendors(String category) async {
-    setState(() => _searching = true);
+    setState(() { _searching = true; _hasSearched = true; });
     try {
       final loc = context.read<LocationService>();
       final vendors = await _api.getVendorsByCategory(
@@ -217,9 +218,11 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(
               child: _loading || _searching
                   ? _buildShimmer()
-                  : results.isEmpty
-                      ? _buildEmpty()
-                      : ListView.builder(
+                  : !_hasSearched
+                      ? _buildInitial()
+                      : results.isEmpty
+                          ? _buildEmpty()
+                          : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           itemCount: results.length,
                           itemBuilder: (_, i) => Padding(
@@ -230,6 +233,27 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInitial() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_rounded, size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
+          const SizedBox(height: 16),
+          Text(
+            'Search for vendors near you',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textOf(context)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Pick a category or type a name to get started',
+            style: TextStyle(fontSize: 13, color: AppColors.textMutedOf(context)),
+          ),
+        ],
       ),
     );
   }
@@ -250,8 +274,8 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildShimmer() {
     final isDark = AppColors.isDark(context);
     return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
-      highlightColor: isDark ? const Color(0xFF3A3A3A) : Colors.grey.shade50,
+      baseColor: isDark ? AppColors.darkSurfaceAlt : Colors.grey.shade200,
+      highlightColor: isDark ? AppColors.darkBorder : Colors.grey.shade50,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: 6,

@@ -122,6 +122,17 @@ bookingsRouter.patch("/:bookingId/status", requireRole(["vendor", "admin", "empl
     return;
   }
 
+  // Ownership check — vendor can only update their own bookings
+  const existing = await getBookingById(req.params.bookingId);
+  if (!existing) {
+    res.status(404).json({ success: false, error: "Booking not found" });
+    return;
+  }
+  if (req.actor!.role === "vendor" && existing.vendorId !== req.actor!.id) {
+    res.status(403).json({ success: false, error: "Not your booking" });
+    return;
+  }
+
   const booking = await updateBookingStatus(req.params.bookingId, parsed.data.status);
   if (!booking) {
     res.status(404).json({ success: false, error: "Booking not found" });

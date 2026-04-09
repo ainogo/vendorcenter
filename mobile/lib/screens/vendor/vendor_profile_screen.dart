@@ -59,14 +59,21 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   CircleAvatar(
                     radius: 44,
                     backgroundColor: AppColors.vendor.withValues(alpha: 0.1),
-                    child: Text(
-                      (auth.userName.isNotEmpty ? auth.userName[0] : 'V').toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.vendor,
-                      ),
-                    ),
+                    backgroundImage: (_profile['profilePictureUrl'] != null &&
+                            (_profile['profilePictureUrl'] as String).isNotEmpty)
+                        ? NetworkImage(_profile['profilePictureUrl'] as String)
+                        : null,
+                    child: (_profile['profilePictureUrl'] != null &&
+                            (_profile['profilePictureUrl'] as String).isNotEmpty)
+                        ? null
+                        : Text(
+                            (auth.userName.isNotEmpty ? auth.userName[0] : 'V').toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.vendor,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -92,25 +99,28 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             // Business info
             if (!_loading && _profile.isNotEmpty) ...[
               _sectionTitle('Business Information'),
-              _infoTile(Icons.store, 'Business Name', _profile['business_name'] ?? 'Not set'),
-              _infoTile(Icons.category, 'Category', _profile['category'] ?? 'Not set'),
-              _infoTile(Icons.location_on, 'Area', _profile['area'] ?? _profile['city'] ?? 'Not set'),
+              _infoTile(Icons.store, 'Business Name', _profile['businessName'] ?? _profile['business_name'] ?? 'Not set'),
+              _infoTile(Icons.category, 'Category', (_profile['serviceCategories'] is List ? (_profile['serviceCategories'] as List).join(', ') : _profile['serviceCategories']?.toString()) ?? 'Not set'),
+              _infoTile(Icons.location_on, 'Area', _profile['zone'] ?? _profile['area'] ?? _profile['city'] ?? 'Not set'),
               _infoTile(Icons.pin_drop, 'Pincode', _profile['primaryPincode'] ?? _profile['primary_pincode'] ?? 'Not set'),
               _infoTile(Icons.phone, 'Phone', _profile['phone'] ?? auth.userPhone ?? 'Not set'),
+              _infoTile(Icons.email_outlined, 'Email', _profile['email'] ?? auth.userEmail ?? 'Not set'),
               const SizedBox(height: 20),
             ],
 
             // Stats from profile
             if (!_loading) ...[
               _sectionTitle('Performance'),
-              _infoTile(Icons.star, 'Rating', '${(_profile['average_rating'] ?? 0.0).toStringAsFixed(1)} / 5'),
-              _infoTile(Icons.check_circle, 'Completed Bookings', '${_profile['completed_bookings'] ?? 0}'),
-              _infoTile(Icons.schedule, 'Member Since', _profile['created_at'] ?? 'N/A'),
+              _infoTile(Icons.star, 'Rating', '${(_profile['averageRating'] ?? _profile['average_rating'] ?? 0.0).toStringAsFixed(1)} / 5'),
+              _infoTile(Icons.check_circle, 'Completed Bookings', '${_profile['completedBookings'] ?? _profile['completed_bookings'] ?? 0}'),
+              _infoTile(Icons.verified, 'Status', _profile['verificationStatus'] ?? _profile['verification_status'] ?? 'Pending'),
+              _infoTile(Icons.schedule, 'Member Since', _formatDate(_profile['createdAt'] ?? _profile['created_at'])),
               const SizedBox(height: 20),
             ],
 
             // Reviews
             _sectionTitle('Quick Links'),
+            _actionTile(Icons.schedule_rounded, 'Availability & Schedule', () => context.push('/availability')),
             _actionTile(Icons.reviews_outlined, 'My Reviews', () => context.push('/reviews')),
             _actionTile(Icons.attach_money, 'Earnings', () => context.push('/earnings')),
             _actionTile(Icons.help_outline, 'Help & Support', () {
@@ -183,6 +193,16 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         onTap: onTap,
       ),
     );
+  }
+
+  String _formatDate(dynamic val) {
+    if (val == null) return 'N/A';
+    try {
+      final dt = DateTime.parse(val.toString());
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return val.toString();
+    }
   }
 
   void _confirmLogout(AuthService auth) {

@@ -195,7 +195,18 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
           obscureText: true,
           decoration: const InputDecoration(hintText: 'Enter your password'),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () => GoRouter.of(context).push('/forgot-password'),
+            child: const Text(
+              'Forgot password?',
+              style: TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
