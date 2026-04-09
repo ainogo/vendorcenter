@@ -53,6 +53,7 @@ model/notebooks/*.ipynb
 
 # Screenshots / debug artifacts (not for repo)
 *.png
+!frontend/public/og-image.png
 hero-console-errors.txt
 amazon-homepage.md
 amazon-nav.md

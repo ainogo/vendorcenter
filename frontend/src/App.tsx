@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { LocationProvider } from "@/hooks/useLocation";
 import { AnimatePresence, motion } from "framer-motion";
 import PageLoader from "@/components/ui/PageLoader";
+import SEO from "@/components/SEO";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -39,20 +41,20 @@ function AnimatedRoutes() {
       >
         <Routes location={location}>
           <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/services" element={<Services />} />
+          <Route path="/login" element={<><SEO title="Login" path="/login" noindex /><Login /></>} />
+          <Route path="/register" element={<><SEO title="Register" path="/register" noindex /><Register /></>} />
+          <Route path="/forgot-password" element={<><SEO title="Forgot Password" path="/forgot-password" noindex /><ForgotPassword /></>} />
+          <Route path="/services" element={<><SEO title="Browse Services" description="Find trusted local service providers near you. Plumbing, electrical, cleaning, and more." path="/services" /><Services /></>} />
           <Route path="/vendor/:vendorId" element={<VendorDetail />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/addresses" element={<CustomerAddresses />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/cookies" element={<Cookies />} />
-          <Route path="/pay/:bookingId" element={<Payment />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="/account" element={<><SEO title="My Account" path="/account" noindex /><Account /></>} />
+          <Route path="/addresses" element={<><SEO title="My Addresses" path="/addresses" noindex /><CustomerAddresses /></>} />
+          <Route path="/explore" element={<><SEO title="Explore Services" description="Discover local services and vendors in your area." path="/explore" /><Explore /></>} />
+          <Route path="/about" element={<><SEO title="About Us" description="Learn about VendorCenter — India's trusted marketplace connecting customers with verified local service providers." path="/about" /><About /></>} />
+          <Route path="/privacy" element={<><SEO title="Privacy Policy" path="/privacy" /><Privacy /></>} />
+          <Route path="/terms" element={<><SEO title="Terms of Service" path="/terms" /><Terms /></>} />
+          <Route path="/cookies" element={<><SEO title="Cookie Policy" path="/cookies" /><Cookies /></>} />
+          <Route path="/pay/:bookingId" element={<><SEO title="Payment" noindex /><Payment /></>} />
+          <Route path="*" element={<><SEO title="Page Not Found" noindex /><NotFound /></>} />
         </Routes>
       </motion.div>
     </AnimatePresence>
@@ -60,6 +62,7 @@ function AnimatedRoutes() {
 }
 
 const App = () => (
+  <HelmetProvider>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <LocationProvider>
@@ -75,6 +78,7 @@ const App = () => (
       </LocationProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;

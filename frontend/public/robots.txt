@@ -1,8 +1,21 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /account
+Disallow: /addresses
+Disallow: /pay/
+Disallow: /vendor/dashboard
+Disallow: /vendor/bookings
+Disallow: /vendor/services
+Disallow: /vendor/profile
+Disallow: /company/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /account
+Disallow: /addresses
+Disallow: /pay/
+Disallow: /vendor/
+Disallow: /company/
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +25,9 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /account
+Disallow: /addresses
+Disallow: /pay/
+Disallow: /company/
+
+Sitemap: https://vendorcenter.in/sitemap.xml
