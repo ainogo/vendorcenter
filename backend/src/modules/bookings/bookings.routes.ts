@@ -25,7 +25,7 @@ import { findUserById } from "../auth/auth.repository.js";
 import { generateBookingReceipt } from "../../services/pdfService.js";
 import { getVendorProfile } from "../vendors/vendors.repository.js";
 import { checkServiceability, vendorServesPincode } from "../service-zones/service-zones.repository.js";
-import { createNotification } from "../notifications/notifications.repository.js";
+import { createNotification, sendPushToUser } from "../notifications/notifications.repository.js";
 
 const statusSchema = z.enum(["pending", "confirmed", "in_progress", "completed", "cancelled"]);
 
@@ -93,13 +93,21 @@ bookingsRouter.post("/", requireRole(["customer"]), async (req: AuthRequest, res
   // Notify vendor about the new booking
   try {
     const customer = await findUserById(req.actor!.id);
+    const notifTitle = "New Booking Request";
+    const notifMessage = `${customer?.name || "A customer"} has booked "${booking.serviceName}" for ${booking.scheduledDate || "unscheduled"}.`;
     await createNotification({
       recipientId: booking.vendorId,
       recipientRole: "vendor",
       category: "booking",
-      title: "New Booking Request",
-      message: `${customer?.name || "A customer"} has booked "${booking.serviceName}" for ${booking.scheduledDate || "unscheduled"}.`,
+      title: notifTitle,
+      message: notifMessage,
       payload: { bookingId: booking.id, serviceName: booking.serviceName, customerId: req.actor!.id },
+    });
+
+    // FCM push notification to vendor
+    sendPushToUser(booking.vendorId, notifTitle, notifMessage, {
+      type: "booking_created",
+      bookingId: booking.id,
     });
   } catch (_notifErr) {
     // Non-critical: don't fail booking if notification insert fails
@@ -154,13 +162,22 @@ bookingsRouter.patch("/:bookingId/status", requireRole(["vendor", "admin", "empl
       in_progress: "In Progress",
       completed: "Completed",
     };
+    const pushTitle = `Booking ${statusLabels[booking.status] || booking.status}`;
+    const pushMessage = `Your booking for "${booking.serviceName}" has been ${statusLabels[booking.status]?.toLowerCase() || booking.status}.`;
     await createNotification({
       recipientId: booking.customerId,
       recipientRole: "customer",
       category: "booking",
-      title: `Booking ${statusLabels[booking.status] || booking.status}`,
-      message: `Your booking for "${booking.serviceName}" has been ${statusLabels[booking.status]?.toLowerCase() || booking.status}.`,
+      title: pushTitle,
+      message: pushMessage,
       payload: { bookingId: booking.id, status: booking.status },
+    });
+
+    // FCM push to customer
+    sendPushToUser(booking.customerId, pushTitle, pushMessage, {
+      type: "booking_status",
+      bookingId: booking.id,
+      status: booking.status,
     });
   } catch (_) {}
 
@@ -241,6 +258,24 @@ bookingsRouter.post("/:bookingId/reject", requireRole(["vendor"]), async (req: A
     entity: "booking",
     metadata: { bookingId: rejected.id, reason: parsed.data.reason },
   });
+
+  // Push notification + in-app notification on rejection
+  try {
+    const rejectTitle = "Booking Cancelled";
+    const rejectMessage = `Your booking for "${rejected.serviceName}" was cancelled by the vendor. Reason: ${parsed.data.reason}`;
+    await createNotification({
+      recipientId: rejected.customerId,
+      recipientRole: "customer",
+      category: "booking",
+      title: rejectTitle,
+      message: rejectMessage,
+      payload: { bookingId: rejected.id, status: "cancelled", reason: parsed.data.reason },
+    });
+    sendPushToUser(rejected.customerId, rejectTitle, rejectMessage, {
+      type: "booking_rejected",
+      bookingId: rejected.id,
+    });
+  } catch (_) {}
 
   res.json({ success: true, data: rejected });
 });

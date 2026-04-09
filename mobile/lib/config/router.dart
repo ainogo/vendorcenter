@@ -83,7 +83,7 @@ GoRouter createRouter(AuthService auth) {
       ),
       GoRoute(
         path: '/forgot-password',
-        pageBuilder: (_, state) => _slidePage(const ForgotPasswordScreen(), state),
+        pageBuilder: (_, state) => _slidePage(const ForgotPasswordScreen(role: 'customer'), state),
       ),
       ShellRoute(
         builder: (_, state, child) => ShellScreen(child: child),

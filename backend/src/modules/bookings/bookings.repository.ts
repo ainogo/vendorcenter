@@ -114,8 +114,8 @@ export async function listBookingsByRole(role: "customer" | "vendor" | "admin" |
               CASE WHEN b.status IN ('completed','cancelled') AND b.payment_status = 'success'
                 THEN NULL ELSE ca.pincode END as "serviceAddressPincode"
        FROM bookings b
-       LEFT JOIN users u ON u.id = b.customer_id
-       LEFT JOIN customer_addresses ca ON ca.id = b.service_address_id
+       LEFT JOIN users u ON u.id::text = b.customer_id
+       LEFT JOIN customer_addresses ca ON ca.id::text = b.service_address_id
        WHERE b.vendor_id = $1 ORDER BY b.created_at DESC`,
       [actorId]
     );

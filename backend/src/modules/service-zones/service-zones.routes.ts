@@ -101,8 +101,8 @@ serviceZonesRouter.get("/counts", async (_req, res, next) => {
 
 // ── Admin ──────────────────────────────────────────────────────
 
-// India Post API proxy for admin UI auto-fill
-serviceZonesRouter.get("/lookup-pincode/:pincode", requireRole(["admin", "employee"]), async (req, res, next) => {
+// India Post API proxy for pincode auto-fill (all authenticated users)
+serviceZonesRouter.get("/lookup-pincode/:pincode", requireRole(["admin", "employee", "vendor", "customer"]), async (req, res, next) => {
   try {
     const result = await lookupPincode(req.params.pincode);
     res.json({ success: true, data: result });

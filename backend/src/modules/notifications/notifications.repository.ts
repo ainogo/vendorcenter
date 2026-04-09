@@ -1,6 +1,7 @@
 import { pool } from "../../db/pool.js";
 import nodemailer, { type Transporter } from "nodemailer";
 import { env } from "../../config/env.js";
+import { isFirebaseConfigured, getFirebaseMessaging } from "../../services/firebaseService.js";
 
 type EmailAttachment = {
   filename: string;
@@ -100,6 +101,56 @@ export async function createNotification(input: {
     [input.recipientId, input.recipientRole, input.category, input.title, input.message, input.payload ?? null]
   );
   return result.rows[0];
+}
+
+/** Send FCM push notification to all devices of a user. Non-critical — errors are logged, not thrown. */
+export async function sendPushToUser(userId: string, title: string, body: string, data?: Record<string, string>) {
+  if (!isFirebaseConfigured()) return;
+
+  try {
+    const tokensResult = await pool.query<{ token: string }>(
+      "SELECT token FROM device_tokens WHERE user_id = $1",
+      [userId]
+    );
+    if (tokensResult.rows.length === 0) return;
+
+    const messaging = getFirebaseMessaging();
+    const tokens = tokensResult.rows.map(r => r.token);
+
+    const response = await messaging.sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      data: data ?? {},
+      android: {
+        priority: "high",
+        notification: {
+          channelId: "vendorcenter_bookings",
+          priority: "high",
+          defaultSound: true,
+          defaultVibrateTimings: true,
+        },
+      },
+    });
+
+    // Clean up invalid tokens
+    if (response.failureCount > 0) {
+      const invalidTokens: string[] = [];
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success && resp.error?.code &&
+          ["messaging/invalid-registration-token", "messaging/registration-token-not-registered"].includes(resp.error.code)) {
+          invalidTokens.push(tokens[idx]);
+        }
+      });
+      if (invalidTokens.length > 0) {
+        await pool.query("DELETE FROM device_tokens WHERE token = ANY($1)", [invalidTokens]);
+        console.log(`[push] Cleaned ${invalidTokens.length} invalid device tokens`);
+      }
+    }
+
+    console.log(`[push] Sent to ${response.successCount}/${tokens.length} devices for user ${userId}`);
+  } catch (err) {
+    console.error("[push] Failed to send push notification", err);
+  }
 }
 
 export async function listNotifications(recipientId: string) {

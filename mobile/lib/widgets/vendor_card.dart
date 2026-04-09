@@ -225,20 +225,63 @@ class VendorCard extends StatelessWidget {
   }
 
   Widget _buildPhotoPlaceholder(String category, bool isDark) {
+    final colors = _categoryGradient(category);
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
-              ? [const Color(0xFF161822), const Color(0xFF1E2030)]
-              : [AppColors.surfaceAlt, AppColors.surfaceContainer],
+              ? [colors[0].withValues(alpha: 0.25), colors[1].withValues(alpha: 0.18)]
+              : [colors[0].withValues(alpha: 0.15), colors[1].withValues(alpha: 0.10)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Center(
-        child: Icon(_categoryIcon(category), size: 44, color: AppColors.primary.withValues(alpha: 0.3)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors[0].withValues(alpha: isDark ? 0.2 : 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(_categoryIcon(category), size: 36,
+                  color: isDark ? colors[0].withValues(alpha: 0.8) : colors[0].withValues(alpha: 0.7)),
+            ),
+            if (category.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                category.length > 20 ? '${category.substring(0, 18)}…' : category,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? colors[0].withValues(alpha: 0.6) : colors[0].withValues(alpha: 0.5),
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
+  }
+
+  static List<Color> _categoryGradient(String category) {
+    final lower = category.toLowerCase();
+    if (lower.contains('clean')) return [const Color(0xFF2196F3), const Color(0xFF64B5F6)];
+    if (lower.contains('electric') || lower.contains('wiring')) return [const Color(0xFFFFA726), const Color(0xFFFFCC80)];
+    if (lower.contains('plumb') || lower.contains('pipe')) return [const Color(0xFF42A5F5), const Color(0xFF90CAF9)];
+    if (lower.contains('paint') || lower.contains('décor')) return [const Color(0xFFAB47BC), const Color(0xFFCE93D8)];
+    if (lower.contains('salon') || lower.contains('beauty') || lower.contains('hair')) return [const Color(0xFFEC407A), const Color(0xFFF48FB1)];
+    if (lower.contains('moving') || lower.contains('reloc') || lower.contains('tow')) return [const Color(0xFF8D6E63), const Color(0xFFBCAAA4)];
+    if (lower.contains('auto') || lower.contains('vehicle')) return [const Color(0xFF66BB6A), const Color(0xFFA5D6A7)];
+    if (lower.contains('garden') || lower.contains('lawn')) return [const Color(0xFF4CAF50), const Color(0xFF81C784)];
+    if (lower.contains('photo') || lower.contains('video')) return [const Color(0xFF7E57C2), const Color(0xFFB39DDB)];
+    if (lower.contains('catering') || lower.contains('food')) return [const Color(0xFFEF5350), const Color(0xFFEF9A9A)];
+    if (lower.contains('ac') || lower.contains('hvac') || lower.contains('air')) return [const Color(0xFF26C6DA), const Color(0xFF80DEEA)];
+    if (lower.contains('appliance') || lower.contains('repair') || lower.contains('mechanic')) return [const Color(0xFF78909C), const Color(0xFFB0BEC5)];
+    return [const Color(0xFF5C6BC0), const Color(0xFF9FA8DA)];
   }
 
   Widget _badge(String label, IconData icon, Color color) {

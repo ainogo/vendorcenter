@@ -6,7 +6,8 @@ import 'package:vendorcenter/services/api_service.dart';
 enum ForgotStep { email, otp, newPassword, success }
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  final String role;
+  const ForgotPasswordScreen({super.key, this.role = 'customer'});
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -75,7 +76,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     });
 
     try {
-      final res = await _api.requestPasswordReset(email);
+      final res = await _api.requestPasswordReset(email, role: widget.role);
       if (mounted) {
         _otpId = res['data']?['otpId'] as String?;
         setState(() => _loading = false);
@@ -83,9 +84,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       }
     } catch (e) {
       if (mounted) {
+        String msg = 'Could not send reset email. Check your email address.';
+        if (e.toString().contains('404')) {
+          msg = widget.role == 'vendor'
+              ? 'No vendor account found with this email.'
+              : 'No customer account found with this email.';
+        }
         setState(() {
           _loading = false;
-          _error = 'Could not send reset email. Check your email address.';
+          _error = msg;
         });
       }
     }

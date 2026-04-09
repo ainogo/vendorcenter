@@ -377,9 +377,18 @@ class ApiService {
   }
 
   // ─── Password reset ────────────────────────────
-  Future<Map<String, dynamic>> requestPasswordReset(String email) async {
-    final res = await _dio.post('/auth/forgot-password', data: {'email': email});
+  Future<Map<String, dynamic>> requestPasswordReset(String email, {String? role}) async {
+    final res = await _dio.post('/auth/forgot-password', data: {'email': email, if (role != null) 'role': role});
     return res.data;
+  }
+
+  // ─── Device Token (FCM Push) ────────────────────
+  Future<void> registerDeviceToken(String token, String platform) async {
+    await _dio.post('/auth/device-token', data: {'token': token, 'platform': platform});
+  }
+
+  Future<void> removeDeviceToken(String token) async {
+    await _dio.delete('/auth/device-token', data: {'token': token});
   }
 
   Future<Map<String, dynamic>> resetPassword({

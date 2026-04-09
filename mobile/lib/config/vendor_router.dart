@@ -43,7 +43,7 @@ GoRouter createVendorRouter(AuthService auth) {
       ),
       GoRoute(
         path: '/forgot-password',
-        builder: (_, __) => const ForgotPasswordScreen(),
+        builder: (_, __) => const ForgotPasswordScreen(role: 'vendor'),
       ),
       GoRoute(
         path: '/onboarding',

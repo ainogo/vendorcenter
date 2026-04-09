@@ -59,6 +59,11 @@ export function getFirebaseAuth(): admin.auth.Auth {
   return app.auth();
 }
 
+export function getFirebaseMessaging(): admin.messaging.Messaging {
+  const app = initFirebase();
+  return app.messaging();
+}
+
 export async function verifyFirebaseToken(idToken: string): Promise<admin.auth.DecodedIdToken> {
   const auth = getFirebaseAuth();
   return auth.verifyIdToken(idToken);

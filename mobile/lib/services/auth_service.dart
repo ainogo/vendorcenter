@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:vendorcenter/services/api_service.dart';
+import 'package:vendorcenter/services/notification_service.dart';
 
 class AuthService extends ChangeNotifier {
   final _api = ApiService();
@@ -26,6 +27,10 @@ class AuthService extends ChangeNotifier {
     } catch (_) {}
     _loading = false;
     notifyListeners();
+    // Re-register FCM token if user is logged in
+    if (_user != null) {
+      NotificationService().registerTokenWithBackend();
+    }
   }
 
   /// Email + password login
@@ -37,6 +42,8 @@ class AuthService extends ChangeNotifier {
       await _api.saveUser(jsonEncode(data['actor']));
       _user = data['actor'];
       notifyListeners();
+      // Register FCM token with backend
+      NotificationService().registerTokenWithBackend();
     } else {
       throw Exception(res['error'] ?? 'Login failed');
     }
@@ -51,6 +58,8 @@ class AuthService extends ChangeNotifier {
       await _api.saveUser(jsonEncode(data['actor']));
       _user = data['actor'];
       notifyListeners();
+      // Register FCM token with backend
+      NotificationService().registerTokenWithBackend();
     } else {
       throw Exception(res['error'] ?? 'Phone login failed');
     }
@@ -58,6 +67,8 @@ class AuthService extends ChangeNotifier {
 
   /// Logout
   Future<void> logout() async {
+    // Unregister FCM token before clearing session
+    await NotificationService().unregisterTokenFromBackend();
     await _api.logout();
     _user = null;
     notifyListeners();

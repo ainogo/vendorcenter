@@ -34,11 +34,12 @@ otpRouter.post("/request", async (req, res) => {
       return;
     }
 
-    // For login purpose, verify the email is registered for the given role
-    if (parsed.data.purpose === "login") {
+    // For login or password_reset, verify the email is registered for the given role
+    if (parsed.data.purpose === "login" || parsed.data.purpose === "password_reset") {
       const user = await findUserByEmail(parsed.data.email, parsed.data.role);
       if (!user) {
-        res.status(404).json({ success: false, error: "No account found with this email. Please register first." });
+        const roleLabel = parsed.data.role ? ` ${parsed.data.role}` : "";
+        res.status(404).json({ success: false, error: `No${roleLabel} account found with this email.` });
         return;
       }
       if (user.suspended) {

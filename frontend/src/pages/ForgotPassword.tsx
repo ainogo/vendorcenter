@@ -27,7 +27,7 @@ const ForgotPassword = () => {
     if (!email) { toast.error(t("messages:error.fillAllFields")); return; }
     setLoading(true);
     try {
-      const res = await api.requestOtp(email, "password_reset");
+      const res = await api.requestOtp(email, "password_reset", "customer");
       if (res.data) {
         setOtpId(res.data.otpId);
         setStep("otp");

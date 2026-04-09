@@ -231,15 +231,16 @@ authRouter.post("/logout", async (req, res) => {
 // ─── Forgot Password (sends OTP email) ──
 authRouter.post("/forgot-password", async (req, res) => {
   try {
-    const parsed = z.object({ email: z.string().email() }).safeParse(req.body);
+    const parsed = z.object({ email: z.string().email(), role: z.string().optional() }).safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ success: false, error: "Valid email required" });
       return;
     }
 
-    const user = await findUserByEmail(parsed.data.email);
+    const user = await findUserByEmail(parsed.data.email, parsed.data.role as any);
     if (!user) {
-      res.status(404).json({ success: false, error: "No account found with this email" });
+      const roleLabel = parsed.data.role ? ` ${parsed.data.role}` : "";
+      res.status(404).json({ success: false, error: `No${roleLabel} account found with this email` });
       return;
     }
 
@@ -618,5 +619,49 @@ authRouter.post("/phone-login", async (req, res) => {
   } catch (err) {
     console.error("[auth] phone-login error", err);
     res.status(500).json({ success: false, error: "Phone login failed" });
+  }
+});
+
+// ─── Device Token Registration (FCM Push) ──
+authRouter.post("/device-token", requireRole(["customer", "vendor", "admin", "employee"]), async (req: AuthRequest, res) => {
+  try {
+    const parsed = z.object({
+      token: z.string().min(10),
+      platform: z.enum(["web", "android", "ios"]),
+    }).safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Valid token and platform required" });
+      return;
+    }
+
+    const { pool } = await import("../../db/pool.js");
+    await pool.query(
+      `INSERT INTO device_tokens (user_id, token, platform, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id, token) DO UPDATE SET platform = $3, updated_at = NOW()`,
+      [req.actor!.id, parsed.data.token, parsed.data.platform]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[auth] device-token error", err);
+    res.status(500).json({ success: false, error: "Failed to register device token" });
+  }
+});
+
+// ─── Device Token Removal (Logout cleanup) ──
+authRouter.delete("/device-token", requireRole(["customer", "vendor", "admin", "employee"]), async (req: AuthRequest, res) => {
+  try {
+    const parsed = z.object({ token: z.string().min(10) }).safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Token required" });
+      return;
+    }
+    const { pool } = await import("../../db/pool.js");
+    await pool.query("DELETE FROM device_tokens WHERE user_id = $1 AND token = $2", [req.actor!.id, parsed.data.token]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[auth] device-token delete error", err);
+    res.status(500).json({ success: false, error: "Failed to remove device token" });
   }
 });
