@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, ArrowLeft, Loader2, Store, MapPin, Clock, LogOut, LocateFixed, AlertTriangle, Camera, ImagePlus, X as XIcon, User } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Store, MapPin, Clock, LogOut, LocateFixed, AlertTriangle, Camera, ImagePlus, X as XIcon, User, Search, CheckCircle2, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,14 @@ const SERVICE_CATEGORIES = [
   "Appliance Repair", "Moving", "Photography", "Catering"
 ];
 
-async function reverseGeocode(lat: number, lng: number): Promise<string> {
+interface ReverseGeocodeResult {
+  zone: string;
+  postcode: string;
+  city: string;
+  state: string;
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
@@ -34,9 +41,14 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
       a.city || a.state_district || "",
       a.state || "",
     ].filter(Boolean);
-    return parts.join(", ") || data.display_name || "";
+    return {
+      zone: parts.join(", ") || data.display_name || "",
+      postcode: a.postcode || "",
+      city: a.city || a.town || a.state_district || "",
+      state: a.state || "",
+    };
   } catch {
-    return "";
+    return { zone: "", postcode: "", city: "", state: "" };
   }
 }
 
@@ -66,6 +78,8 @@ const VendorEditProfile = () => {
   const [workingHours, setWorkingHours] = useState("");
   const [primaryPincode, setPrimaryPincode] = useState("");
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [lookingUpPincode, setLookingUpPincode] = useState(false);
+  const [pincodeInfo, setPincodeInfo] = useState<{ area?: string; district?: string; state?: string; serviceable?: boolean } | null>(null);
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
   const [uploadingPic, setUploadingPic] = useState(false);
@@ -163,8 +177,77 @@ const VendorEditProfile = () => {
   const setLocationAndGeocode = async (lat: number, lng: number) => {
     setLatitude(String(lat));
     setLongitude(String(lng));
-    const address = await reverseGeocode(lat, lng);
-    if (address) setZone(address);
+    const result = await reverseGeocode(lat, lng);
+    if (result.zone) setZone(result.zone);
+    // Auto-fill pincode from reverse geocode and validate via India Post
+    if (result.postcode && result.postcode.length === 6) {
+      setPrimaryPincode(result.postcode);
+      await lookupPincodeInfo(result.postcode);
+    }
+  };
+
+  const lookupPincodeInfo = async (pincode: string) => {
+    if (!/^\d{6}$/.test(pincode)) {
+      setPincodeInfo(null);
+      return;
+    }
+    setLookingUpPincode(true);
+    setPincodeInfo(null);
+    try {
+      // Try backend India Post lookup first
+      const res = await api.lookupPincode(pincode);
+      if (res.data?.postOffices?.length > 0) {
+        const po = res.data.postOffices[0];
+        setPincodeInfo({
+          area: po.Name,
+          district: po.District,
+          state: po.State,
+          serviceable: true,
+        });
+        // Auto-fill zone with structured address if zone is empty or was auto-filled
+        const zoneStr = [po.Name, po.District, po.State].filter(Boolean).join(", ");
+        setZone(zoneStr);
+      } else {
+        // Fallback: direct India Post API
+        const fallback = await fetch(`https://api.postalpincode.in/pincode/${encodeURIComponent(pincode)}`);
+        const fbData = await fallback.json();
+        if (fbData?.[0]?.Status === "Success" && fbData[0]?.PostOffice?.length > 0) {
+          const po = fbData[0].PostOffice[0];
+          setPincodeInfo({
+            area: po.Name,
+            district: po.District,
+            state: po.State,
+            serviceable: false,
+          });
+          const zoneStr = [po.Name, po.District, po.State].filter(Boolean).join(", ");
+          setZone(zoneStr);
+        } else {
+          setPincodeInfo(null);
+          toast.error("Invalid pincode — not found in India Post database");
+        }
+      }
+    } catch {
+      // Fallback: direct India Post API
+      try {
+        const fallback = await fetch(`https://api.postalpincode.in/pincode/${encodeURIComponent(pincode)}`);
+        const fbData = await fallback.json();
+        if (fbData?.[0]?.Status === "Success" && fbData[0]?.PostOffice?.length > 0) {
+          const po = fbData[0].PostOffice[0];
+          setPincodeInfo({
+            area: po.Name,
+            district: po.District,
+            state: po.State,
+            serviceable: false,
+          });
+          const zoneStr = [po.Name, po.District, po.State].filter(Boolean).join(", ");
+          setZone(zoneStr);
+        }
+      } catch {
+        // ignore fallback errors
+      }
+    } finally {
+      setLookingUpPincode(false);
+    }
   };
 
   const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,10 +377,13 @@ const VendorEditProfile = () => {
                   <div className="mt-4 space-y-2 text-sm">
                     <p><strong>{t("editProfile.business")}</strong> {businessName}</p>
                     <p><strong>{t("editProfile.categoriesLabel")}</strong> {selectedCategories.join(", ")}</p>
-                    <p><strong>{t("editProfile.zone")}</strong> {zone}</p>
                     {primaryPincode && <p><strong>Pincode:</strong> {primaryPincode}</p>}
+                    <p><strong>{t("editProfile.zone")}</strong> {zone}</p>
                     <p><strong>{t("editProfile.workingHours")}</strong> {workingHours}</p>
                     <p><strong>{t("editProfile.serviceRadius")}</strong> {serviceRadius} km</p>
+                    {latitude && longitude && (
+                      <p className="text-xs text-muted-foreground">GPS: {parseFloat(latitude).toFixed(5)}, {parseFloat(longitude).toFixed(5)}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -417,6 +503,7 @@ const VendorEditProfile = () => {
         zone,
         serviceRadiusKm: parseFloat(serviceRadius) || 10,
         workingHours,
+        ...(primaryPincode && /^\d{6}$/.test(primaryPincode) ? { primaryPincode } : {}),
       });
       toast.success("Profile updated! This was your one-time edit.");
       navigate("/dashboard");
@@ -603,6 +690,56 @@ const VendorEditProfile = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Pincode with India Post lookup */}
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Pincode *</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g. 413512"
+                      className="h-11 rounded-xl flex-1"
+                      value={primaryPincode}
+                      maxLength={6}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                        setPrimaryPincode(val);
+                        setPincodeInfo(null);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-xl gap-1.5 px-4"
+                      disabled={lookingUpPincode || primaryPincode.length !== 6}
+                      onClick={() => lookupPincodeInfo(primaryPincode)}
+                    >
+                      {lookingUpPincode ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                      Lookup
+                    </Button>
+                  </div>
+                  {pincodeInfo && (
+                    <div className={`mt-2 p-3 rounded-lg text-sm flex items-start gap-2 ${
+                      pincodeInfo.serviceable
+                        ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                        : "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                    }`}>
+                      {pincodeInfo.serviceable
+                        ? <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        : <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      }
+                      <div>
+                        <p className="font-medium">{pincodeInfo.area}</p>
+                        <p className="text-muted-foreground">{pincodeInfo.district}, {pincodeInfo.state}</p>
+                        {!pincodeInfo.serviceable && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            This pincode is not yet in our service zones — you can still save it.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Zone / Area — auto-filled from pincode or reverse geocode */}
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">Zone / Area *</label>
                   <PlaceAutocompleteInput
@@ -616,8 +753,10 @@ const VendorEditProfile = () => {
                     placeholder={t("editProfile.zonePlaceholder")}
                     className="h-11 rounded-xl"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Auto-filled from pincode lookup or location detection. You can also type manually.</p>
                 </div>
 
+                {/* Map */}
                 <MapErrorBoundary>
                     <LocationPicker
                       latitude={parseFloat(latitude) || 0}
@@ -629,6 +768,7 @@ const VendorEditProfile = () => {
                     />
                 </MapErrorBoundary>
 
+                {/* Detect My Location */}
                 <Button
                   type="button"
                   variant="outline"
@@ -642,7 +782,7 @@ const VendorEditProfile = () => {
                         const lat = pos.coords.latitude;
                         const lng = pos.coords.longitude;
                         await setLocationAndGeocode(lat, lng);
-                        toast.success("Location detected!");
+                        toast.success("Location detected! Pincode and zone auto-filled.");
                         setDetectingLocation(false);
                       },
                       () => { toast.error("Could not detect location"); setDetectingLocation(false); }
@@ -650,8 +790,15 @@ const VendorEditProfile = () => {
                   }}
                 >
                   {detectingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
-                  {detectingLocation ? "Detecting..." : "Detect My Location"}
+                  {detectingLocation ? "Detecting location & pincode..." : "Detect My Location"}
                 </Button>
+
+                {/* Lat/Lng display (read-only info) */}
+                {latitude && longitude && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    GPS: {parseFloat(latitude).toFixed(5)}, {parseFloat(longitude).toFixed(5)}
+                  </p>
+                )}
 
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">{t("editProfile.serviceRadiusKm")}</label>

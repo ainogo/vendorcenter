@@ -304,18 +304,20 @@ export async function getVendorProfile(vendorId: string) {
   return result.rows[0] ?? null;
 }
 
-export async function updateVendorProfile(vendorId: string, input: Omit<VendorOnboardingInput, "vendorId" | "documentUrls" | "portfolioUrls">) {
+export async function updateVendorProfile(vendorId: string, input: Omit<VendorOnboardingInput, "vendorId" | "documentUrls" | "portfolioUrls"> & { primaryPincode?: string }) {
   const result = await pool.query(
     `UPDATE vendor_profiles
      SET business_name = $2, service_categories = $3::jsonb,
          latitude = $4, longitude = $5, zone = $6,
          service_radius_km = $7, working_hours = $8,
+         primary_pincode = COALESCE($9, primary_pincode),
          profile_edited = true, updated_at = NOW()
      WHERE vendor_id = $1
      RETURNING id, vendor_id as "vendorId", business_name as "businessName",
               service_categories as "serviceCategories", latitude, longitude, zone,
               service_radius_km as "serviceRadiusKm", working_hours as "workingHours",
               document_urls as "documentUrls", verification_status as "verificationStatus",
+              primary_pincode as "primaryPincode",
               profile_edited as "profileEdited", created_at as "createdAt"`,
     [
       vendorId,
@@ -326,6 +328,7 @@ export async function updateVendorProfile(vendorId: string, input: Omit<VendorOn
       input.zone,
       input.serviceRadiusKm,
       input.workingHours,
+      input.primaryPincode || null,
     ]
   );
   return result.rows[0] ?? null;

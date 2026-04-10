@@ -191,6 +191,7 @@ export const vendorApi = {
     zone: string;
     serviceRadiusKm: number;
     workingHours: string;
+    primaryPincode?: string;
   }) =>
     request<any>("/vendors/me", {
       method: "PATCH",

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -157,9 +158,49 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
           _lat = pos.latitude;
           _lng = pos.longitude;
         });
+      }
+
+      // Reverse geocode via Nominatim to extract pincode and zone
+      try {
+        final uri = Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?lat=${pos.latitude}&lon=${pos.longitude}&format=json&addressdetails=1',
+        );
+        final httpClient = HttpClient();
+        final request = await httpClient.getUrl(uri);
+        request.headers.set('Accept-Language', 'en');
+        final response = await request.close();
+        if (response.statusCode == 200) {
+          final body = await response.transform(utf8.decoder).join();
+          final decoded = jsonDecode(body) as Map<String, dynamic>;
+          final address = decoded['address'] as Map<String, dynamic>? ?? {};
+          final postcode = address['postcode'] as String? ?? '';
+          final suburb = address['suburb'] ?? address['neighbourhood'] ?? address['village'] ?? address['town'] ?? '';
+          final city = address['city'] ?? address['state_district'] ?? '';
+          final state = address['state'] ?? '';
+          final parts = [suburb, city, state].where((s) => s.toString().isNotEmpty).join(', ');
+
+          if (mounted && postcode.length == 6) {
+            setState(() {
+              _pincodeCtrl.text = postcode;
+            });
+            // Auto-lookup the pincode via India Post
+            await _lookupPincode();
+          }
+          if (mounted && parts.isNotEmpty && _zoneCtrl.text.isEmpty) {
+            setState(() {
+              _zoneCtrl.text = parts;
+            });
+          }
+        }
+        httpClient.close();
+      } catch (_) {
+        // Reverse geocode is best-effort; location coordinates already set
+      }
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Location detected successfully'),
+            content: Text('Location detected${_pincodeCtrl.text.length == 6 ? " — pincode auto-filled" : ""}'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -222,14 +263,16 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
       if (mounted) context.read<AuthService>().updateUser(updated);
 
       // Update vendor business profile
+      final pincode = _pincodeCtrl.text.trim();
       await _api.updateVendorProfile({
         'businessName': _businessNameCtrl.text.trim(),
         'serviceCategories': _categories.isNotEmpty ? _categories : ['General'],
         'latitude': _lat ?? 0.0,
         'longitude': _lng ?? 0.0,
-        'zone': _pincodeCtrl.text.trim().isNotEmpty ? _pincodeCtrl.text.trim() : (_zoneCtrl.text.trim().isNotEmpty ? _zoneCtrl.text.trim() : 'Default'),
+        'zone': _zoneCtrl.text.trim().isNotEmpty ? _zoneCtrl.text.trim() : (pincode.isNotEmpty ? pincode : 'Default'),
         'serviceRadiusKm': (double.tryParse(_radiusCtrl.text.trim()) ?? 10).clamp(1, 100),
         'workingHours': _hoursCtrl.text.trim().isNotEmpty ? _hoursCtrl.text.trim() : '9 AM - 6 PM',
+        if (RegExp(r'^\d{6}$').hasMatch(pincode)) 'primaryPincode': pincode,
       });
 
       if (mounted) {

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.vendorcenter.vendorcenter"
+    namespace = "com.vendorcenter.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.vendorcenter.vendorcenter"
+        applicationId = "com.vendorcenter.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

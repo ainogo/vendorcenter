@@ -141,6 +141,7 @@ vendorsRouter.patch("/me", requireRole(["vendor"]), async (req: AuthRequest, res
     zone: z.string().min(2),
     serviceRadiusKm: z.number().positive().max(100),
     workingHours: z.string().min(3),
+    primaryPincode: z.string().regex(/^\d{6}$/).optional(),
   }).safeParse(req.body);
 
   if (!parsed.success) {
