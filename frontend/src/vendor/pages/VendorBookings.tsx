@@ -288,22 +288,9 @@ const VendorBookings = () => {
                         </div>
                       </div>
 
-                      {/* Step 2: Work Done → Ask customer to pay */}
-                      {!otpSent[b.id] ? (
-                        <Button
-                          size="sm"
-                          className="bg-orange-500 hover:bg-orange-600 text-white w-full"
-                          disabled={sendingOtp[b.id]}
-                          onClick={() => requestCompletion(b.id)}
-                        >
-                          {sendingOtp[b.id] ? (
-                            <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> {t("bookings.workDoneRequestPayment")}...</>
-                          ) : (
-                            <><Send className="w-3.5 h-3.5 mr-1" /> {t("bookings.workDoneRequestPayment")}</>
-                          )}
-                        </Button>
-                      ) : (
-                        /* Step 3: Enter OTP from customer */
+                      {/* Step 2: Completion flow — 3 states based on server data */}
+                      {b.paymentStatus === "success" || otpSent[b.id] ? (
+                        /* State A: Customer has paid → vendor enters completion OTP */
                         <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-3 border border-green-200 dark:border-green-800">
                           <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-2 flex items-center gap-1">
                             <ShieldCheck className="w-3.5 h-3.5" /> {t("bookings.enterOtpFromCustomer")}
@@ -343,6 +330,43 @@ const VendorBookings = () => {
                             {t("bookings.resendOtp")}
                           </Button>
                         </div>
+                      ) : b.completionRequestedAt ? (
+                        /* State B: Completion requested, waiting for customer payment */
+                        <div className="bg-amber-50 dark:bg-amber-900/10 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" /> Waiting for Customer Payment
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Payment request sent. The customer needs to confirm payment via email link or app.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            disabled={sendingOtp[b.id]}
+                            onClick={() => requestCompletion(b.id)}
+                          >
+                            {sendingOtp[b.id] ? (
+                              <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Resending...</>
+                            ) : (
+                              <><Send className="w-3.5 h-3.5 mr-1" /> Resend Payment Request</>
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        /* State C: Work done, vendor hasn't requested payment yet */
+                        <Button
+                          size="sm"
+                          className="bg-orange-500 hover:bg-orange-600 text-white w-full"
+                          disabled={sendingOtp[b.id]}
+                          onClick={() => requestCompletion(b.id)}
+                        >
+                          {sendingOtp[b.id] ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> {t("bookings.workDoneRequestPayment")}...</>
+                          ) : (
+                            <><Send className="w-3.5 h-3.5 mr-1" /> {t("bookings.workDoneRequestPayment")}</>
+                          )}
+                        </Button>
                       )}
 
                       <Button size="sm" variant="outline" onClick={() => downloadReceipt(b.id)}>

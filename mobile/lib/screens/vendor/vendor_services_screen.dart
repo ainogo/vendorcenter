@@ -364,9 +364,10 @@ class _VendorServicesScreenState extends State<VendorServicesScreen> {
   }
 
   Widget _buildLoading() {
+    final isDark = AppColors.isDark(context);
     return Shimmer.fromColors(
-      baseColor: AppColors.surfaceAlt,
-      highlightColor: AppColors.surface,
+      baseColor: isDark ? AppColors.darkSurfaceAlt : AppColors.surfaceAlt,
+      highlightColor: isDark ? AppColors.darkBorder : AppColors.surface,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: 4,
@@ -374,7 +375,7 @@ class _VendorServicesScreenState extends State<VendorServicesScreen> {
           height: 72,
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceOf(context),
             borderRadius: BorderRadius.circular(14),
           ),
         ),

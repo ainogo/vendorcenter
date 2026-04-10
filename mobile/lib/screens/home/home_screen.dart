@@ -723,19 +723,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.all(16),
         children: [
           // Top bar placeholder
-          Container(height: 48, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12))),
+          Container(height: 48, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: AppColors.surfaceOf(context), borderRadius: BorderRadius.circular(12))),
           // Search placeholder
-          Container(height: 50, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14))),
+          Container(height: 50, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: AppColors.surfaceOf(context), borderRadius: BorderRadius.circular(14))),
           // Banner placeholder
-          Container(height: 160, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20))),
+          Container(height: 160, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: AppColors.surfaceOf(context), borderRadius: BorderRadius.circular(20))),
           // Quick actions placeholder
-          Row(children: List.generate(4, (_) => Expanded(child: Container(height: 80, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)))))),
+          Row(children: List.generate(4, (_) => Expanded(child: Container(height: 80, margin: const EdgeInsets.only(right: 8), decoration: BoxDecoration(color: AppColors.surfaceOf(context), borderRadius: BorderRadius.circular(14)))))),
           const SizedBox(height: 16),
           // Vendor placeholders
           ...List.generate(4, (_) => Container(
             height: 90,
             margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: AppColors.surfaceOf(context), borderRadius: BorderRadius.circular(14)),
           )),
         ],
       ),
