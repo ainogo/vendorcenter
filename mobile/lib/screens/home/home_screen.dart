@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vendorcenter/config/theme.dart';
 import 'package:vendorcenter/services/api_service.dart';
+import 'package:vendorcenter/config/api_config.dart';
 import 'package:vendorcenter/services/auth_service.dart';
 import 'package:vendorcenter/services/localization_service.dart';
 import 'package:vendorcenter/services/location_service.dart';
@@ -42,11 +44,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   double? _lastLat;
   double? _lastLng;
 
+  // Notification badge
+  int _unreadCount = 0;
+
   @override
   void initState() {
     super.initState();
     _bannerCtrl = PageController(viewportFraction: 1.0);
     _loadData();
+    _loadUnreadCount();
     // Request permissions after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) PermissionService.requestStartupPermissions(context);
@@ -94,6 +100,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   ];
   static const _bannerTitleKeys = ['home.banner_find_title', 'home.banner_explore_title', 'home.banner_rate_title'];
   static const _bannerSubKeys = ['home.banner_find_sub', 'home.banner_explore_sub', 'home.banner_rate_sub'];
+
+  Future<void> _loadUnreadCount() async {
+    if (!context.read<AuthService>().isLoggedIn) return;
+    try {
+      final count = await _api.getUnreadNotificationCount();
+      if (mounted) setState(() => _unreadCount = count);
+    } catch (_) {}
+  }
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
@@ -261,13 +275,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final displayName = hasRealName ? userName : '';
     final initials = hasRealName ? _userInitials(userName) : '';
     final loc = context.watch<LocationService>();
+    final auth = context.watch<AuthService>();
+    final profilePic = auth.profilePictureUrl;
+    final String? fullProfilePic = profilePic != null
+        ? (profilePic.startsWith('http')
+            ? profilePic
+            : '${ApiConfig.baseUrl}/uploads/files/${profilePic.split('/').last}')
+        : null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 12, 4),
       child: Column(
         children: [
           Row(
             children: [
-              // User avatar circle — gradient
+              // User avatar circle — gradient with profile pic
               GestureDetector(
                 onTap: () => context.go('/profile'),
                 child: Container(
@@ -281,11 +302,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: hasRealName
-                        ? Text(initials, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white))
-                        : const Icon(Icons.person_rounded, size: 20, color: Colors.white),
-                  ),
+                  child: fullProfilePic != null
+                      ? ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: fullProfilePic,
+                            width: 42,
+                            height: 42,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Center(
+                              child: hasRealName
+                                  ? Text(initials, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white))
+                                  : const Icon(Icons.person_rounded, size: 20, color: Colors.white),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: hasRealName
+                              ? Text(initials, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white))
+                              : const Icon(Icons.person_rounded, size: 20, color: Colors.white),
+                        ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -313,8 +348,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               // Notification
               _ActionIcon(
                 icon: Icons.notifications_outlined,
-                onTap: () => context.push('/notifications'),
-                badge: true,
+                onTap: () async {
+                  await context.push('/notifications');
+                  _loadUnreadCount();
+                },
+                badge: _unreadCount > 0,
               ),
             ],
           ),

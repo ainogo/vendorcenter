@@ -376,6 +376,15 @@ class ApiService {
     return res.data['data'] ?? [];
   }
 
+  Future<int> getUnreadNotificationCount() async {
+    final res = await _dio.get('/notifications/my/unread-count');
+    return res.data['data']?['count'] ?? 0;
+  }
+
+  Future<void> markNotificationsRead() async {
+    await _dio.patch('/notifications/my/read-all');
+  }
+
   // ─── Password reset ────────────────────────────
   Future<Map<String, dynamic>> requestPasswordReset(String email, {String? role}) async {
     final res = await _dio.post('/auth/forgot-password', data: {'email': email, if (role != null) 'role': role});

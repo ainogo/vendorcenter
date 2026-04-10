@@ -22,6 +22,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   final _searchCtrl = TextEditingController();
 
   LatLng _center = const LatLng(19.0760, 72.8777); // Mumbai default
+  LatLng? _userLocation; // Actual GPS position
   double _radius = 10;
   final double _zoom = 13;
   List<dynamic> _vendors = [];
@@ -120,6 +121,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         );
         setState(() {
           _center = LatLng(position.latitude, position.longitude);
+          _userLocation = _center;
         });
         _mapController.move(_center, _zoom);
       }
@@ -159,20 +161,34 @@ class _ExploreScreenState extends State<ExploreScreen> {
   List<Marker> _buildMarkers() {
     final markers = <Marker>[];
 
-    // User location marker
+    // User GPS location — blue dot
+    if (_userLocation != null) {
+      markers.add(
+        Marker(
+          point: _userLocation!,
+          width: 20,
+          height: 20,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.primary.withAlpha(180),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(color: AppColors.primary.withAlpha(60), blurRadius: 8),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Selected search center — red pin
     markers.add(
       Marker(
         point: _center,
         width: 40,
         height: 40,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.primary.withAlpha(50),
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primary, width: 2),
-          ),
-          child: const Icon(Icons.my_location, color: AppColors.primary, size: 20),
-        ),
+        child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
       ),
     );
 
@@ -279,6 +295,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
             options: MapOptions(
               initialCenter: _center,
               initialZoom: _zoom,
+              onTap: (tapPos, latLng) {
+                setState(() => _center = latLng);
+                _loadVendors();
+              },
               onPositionChanged: (pos, hasGesture) {
                 if (hasGesture) {
                   _center = pos.center;

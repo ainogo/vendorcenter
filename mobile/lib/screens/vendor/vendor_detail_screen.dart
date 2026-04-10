@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vendorcenter/config/theme.dart';
 import 'package:vendorcenter/services/api_service.dart';
+import 'package:vendorcenter/config/api_config.dart';
 import 'package:vendorcenter/services/localization_service.dart';
 
 class VendorDetailScreen extends StatefulWidget {
@@ -26,7 +28,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadData();
   }
 
@@ -86,6 +88,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
     final ownerName = v['ownerName'] ?? '';
     final isVerified = v['verificationStatus'] == 'approved' || v['is_verified'] == true;
     final initials = _getInitials(name);
+    final profilePicUrl = v['profilePictureUrl'] ?? v['profile_picture_url'];
+    final portfolioUrls = (v['portfolioUrls'] ?? v['portfolio_urls']) as List<dynamic>? ?? [];
+    final String? fullProfilePic = profilePicUrl != null
+        ? (profilePicUrl.toString().startsWith('http')
+            ? profilePicUrl.toString()
+            : '${ApiConfig.baseUrl}/uploads/files/${profilePicUrl.toString().split('/').last}')
+        : null;
 
     return CustomScrollView(
       slivers: [
@@ -108,7 +117,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
                 backgroundColor: Colors.white70,
                 child: Icon(Icons.share_outlined, size: 18, color: Colors.black87),
               ),
-              onPressed: () => Share.share('Check out $name on VendorCenter!\nhttps://vendorcenter.in/vendor/${widget.vendorId}'),
+              onPressed: () => Share.share('Check out $name on VendorCenter!\nhttps://vendorcenter.in/v/${widget.vendorId}'),
             ),
           ],
           flexibleSpace: FlexibleSpaceBar(
@@ -132,11 +141,10 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
                         CircleAvatar(
                           radius: 40,
                           backgroundColor: Colors.white24,
-                          child: Icon(
-                            _categoryIcon(category),
-                            size: 36,
-                            color: Colors.white,
-                          ),
+                          backgroundImage: fullProfilePic != null ? CachedNetworkImageProvider(fullProfilePic) : null,
+                          child: fullProfilePic == null
+                              ? Text(initials, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white))
+                              : null,
                         ),
                         if (isVerified)
                           Positioned(
@@ -214,6 +222,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
                 labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 tabs: [
                   Tab(text: context.tr('vendor.services')),
+                  const Tab(text: 'Portfolio'),
                   Tab(text: context.tr('vendor.reviews')),
                   const Tab(text: 'About'),
                 ],
@@ -229,6 +238,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
             children: [
               // Services tab
               _buildServicesTab(),
+              // Portfolio tab
+              _buildPortfolioTab(portfolioUrls),
               // Reviews tab
               _buildReviewsTab(),
               // About tab
@@ -255,6 +266,90 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
         else
           ..._services.map((s) => _serviceItem(s)),
       ],
+    );
+  }
+
+  Widget _buildPortfolioTab(List<dynamic> portfolioUrls) {
+    if (portfolioUrls.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_library_outlined, size: 56, color: AppColors.textMutedOf(context)),
+            const SizedBox(height: 12),
+            Text('No portfolio photos yet', style: TextStyle(color: AppColors.textSecondaryOf(context))),
+          ],
+        ),
+      );
+    }
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 1,
+      ),
+      itemCount: portfolioUrls.length,
+      itemBuilder: (_, i) {
+        final url = portfolioUrls[i].toString();
+        final fullUrl = url.startsWith('http')
+            ? url
+            : '${ApiConfig.baseUrl}/uploads/files/${url.split('/').last}';
+        return GestureDetector(
+          onTap: () => _showFullImage(context, fullUrl),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(
+              imageUrl: fullUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                color: AppColors.surfaceAltOf(context),
+                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                color: AppColors.surfaceAltOf(context),
+                child: Icon(Icons.broken_image_outlined, color: AppColors.textMutedOf(context)),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFullImage(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.contain,
+                placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
+                errorWidget: (_, __, ___) => const Center(child: Icon(Icons.broken_image, size: 48, color: Colors.white54)),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.black54,
+                  child: Icon(Icons.close, size: 18, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -425,13 +520,16 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
               Text('₹${s['price'] ?? '0'}',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.primary)),
               const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(8),
+              GestureDetector(
+                onTap: () => context.push('/book/${widget.vendorId}'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('Book', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
-                child: const Text('Book', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
               ),
             ],
           ),

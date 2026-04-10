@@ -36,9 +36,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final data = await _api.getNotifications();
       if (mounted) setState(() { _notifications = data; _loading = false; });
+      // Mark all as read after loading
+      try { await _api.markNotificationsRead(); } catch (_) {}
     } catch (e) {
       if (mounted) setState(() { _error = 'Could not load notifications'; _loading = false; });
     }
+  }
+
+  void _onNotificationTap(dynamic n) {
+    final category = n['category']?.toString();
+    final payload = n['payload'];
+    final bookingId = payload is Map ? (payload['bookingId'] ?? payload['booking_id'])?.toString() : null;
+
+    if (bookingId != null && (category == 'booking' || category == 'payment')) {
+      context.push('/booking/$bookingId');
+      return;
+    }
+    // Default: no navigation (notification detail / in-place)
   }
 
   IconData _iconFor(String? category) {
@@ -115,6 +129,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final iconColor = _colorFor(category);
 
     return ListTile(
+      onTap: () => _onNotificationTap(n),
       leading: Container(
         width: 42, height: 42,
         decoration: BoxDecoration(

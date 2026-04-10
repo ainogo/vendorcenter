@@ -6,6 +6,8 @@ import { trackActivity } from "../activity/activity.service.js";
 import {
   createNotification,
   listNotifications,
+  markAllAsRead,
+  getUnreadCount,
   listEmailJobs,
   processQueuedEmailJobs,
   queueEmailJob
@@ -87,6 +89,16 @@ notificationsRouter.post("/emit", requireRole(["admin", "employee", "vendor", "c
 
 notificationsRouter.get("/my", requireRole(["customer", "vendor", "admin", "employee"]), async (req: AuthRequest, res) => {
   res.json({ success: true, data: await listNotifications(req.actor!.id) });
+});
+
+notificationsRouter.get("/my/unread-count", requireRole(["customer", "vendor", "admin", "employee"]), async (req: AuthRequest, res) => {
+  const count = await getUnreadCount(req.actor!.id);
+  res.json({ success: true, data: { count } });
+});
+
+notificationsRouter.patch("/my/read-all", requireRole(["customer", "vendor", "admin", "employee"]), async (req: AuthRequest, res) => {
+  const updated = await markAllAsRead(req.actor!.id);
+  res.json({ success: true, data: { updated } });
 });
 
 notificationsRouter.get("/email-jobs", requireRole(["admin", "employee"]), async (_req, res) => {

@@ -31,6 +31,13 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _loadCategories();
+    // Auto-load vendors if location is already set
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final loc = context.read<LocationService>();
+      if (loc.hasLocation && _activeCategory == null && !_hasSearched) {
+        _loadAllVendors();
+      }
+    });
   }
 
   @override
@@ -127,6 +134,7 @@ class _SearchScreenState extends State<SearchScreen> {
     double tempRadius = _maxRadius;
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(

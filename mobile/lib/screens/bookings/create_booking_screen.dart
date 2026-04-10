@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -170,8 +171,13 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String msg = 'Booking failed. Please try again.';
+        if (e is DioException && e.response?.data is Map) {
+          final serverMsg = (e.response!.data as Map)['error'];
+          if (serverMsg is String && serverMsg.isNotEmpty) msg = serverMsg;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(msg), backgroundColor: AppColors.error),
         );
       }
     } finally {

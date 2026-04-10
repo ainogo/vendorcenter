@@ -16,6 +16,7 @@ class AuthService extends ChangeNotifier {
   String? get userEmail => _user?['email'];
   String? get userPhone => _user?['phone'];
   String get userId => _user?['id'] ?? '';
+  String? get profilePictureUrl => _user?['profilePictureUrl'] ?? _user?['profile_picture_url'];
 
   /// Restore session from secure storage on app start
   Future<void> restoreSession() async {

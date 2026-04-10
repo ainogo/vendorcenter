@@ -46,6 +46,7 @@ function AnimatedRoutes() {
           <Route path="/forgot-password" element={<><SEO title="Forgot Password" path="/forgot-password" noindex /><ForgotPassword /></>} />
           <Route path="/services" element={<><SEO title="Browse Services" description="Find trusted local service providers near you. Plumbing, electrical, cleaning, and more." path="/services" /><Services /></>} />
           <Route path="/vendor/:vendorId" element={<VendorDetail />} />
+          <Route path="/v/:vendorId" element={<VendorDetail />} />
           <Route path="/account" element={<><SEO title="My Account" path="/account" noindex /><Account /></>} />
           <Route path="/addresses" element={<><SEO title="My Addresses" path="/addresses" noindex /><CustomerAddresses /></>} />
           <Route path="/explore" element={<><SEO title="Explore Services" description="Discover local services and vendors in your area." path="/explore" /><Explore /></>} />

@@ -162,6 +162,22 @@ export async function listNotifications(recipientId: string) {
   return result.rows;
 }
 
+export async function markAllAsRead(recipientId: string) {
+  const result = await pool.query(
+    `UPDATE notifications SET read_at = NOW() WHERE recipient_id = $1 AND read_at IS NULL`,
+    [recipientId]
+  );
+  return result.rowCount ?? 0;
+}
+
+export async function getUnreadCount(recipientId: string): Promise<number> {
+  const result = await pool.query(
+    `SELECT COUNT(*)::int as count FROM notifications WHERE recipient_id = $1 AND read_at IS NULL`,
+    [recipientId]
+  );
+  return result.rows[0]?.count ?? 0;
+}
+
 export async function queueEmailJob(input: {
   recipientEmail: string;
   senderEmail: string;
