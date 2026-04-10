@@ -210,9 +210,9 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.surfaceOf(context),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.borderOf(context)),
             ),
             child: Row(
               children: [
@@ -226,12 +226,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _vendor!['business_name'] ?? 'Vendor',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        _vendor!['businessName'] ?? _vendor!['business_name'] ?? 'Vendor',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textOf(context)),
                       ),
                       Text(
-                        _vendor!['category'] ?? '',
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        (_vendor!['serviceCategories'] is List ? (_vendor!['serviceCategories'] as List).join(', ') : _vendor!['category']?.toString()) ?? '',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondaryOf(context)),
                       ),
                     ],
                   ),

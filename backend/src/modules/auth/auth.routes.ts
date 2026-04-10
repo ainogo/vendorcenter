@@ -141,7 +141,7 @@ authRouter.post("/login", async (req, res) => {
       data: {
         accessToken,
         refreshToken,
-        actor: { id: user.id, role: user.role, email: user.email, verified: user.verified, name: user.name, phone: user.phone, businessName: user.business_name }
+        actor: { id: user.id, role: user.role, email: user.email, verified: user.verified, name: user.name, phone: user.phone, businessName: user.business_name, profilePictureUrl: user.profile_picture_url }
       }
     });
   } catch (err) {
@@ -613,6 +613,7 @@ authRouter.post("/phone-login", async (req, res) => {
           name: user.name,
           phone: user.phone,
           businessName: user.business_name,
+          profilePictureUrl: user.profile_picture_url,
         },
       },
     });

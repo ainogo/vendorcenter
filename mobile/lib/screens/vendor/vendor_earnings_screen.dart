@@ -45,7 +45,7 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> {
 
   double get _totalEarnings {
     return _completedBookings.fold<double>(0, (sum, b) {
-      final amount = double.tryParse(b['total_amount']?.toString() ?? '0') ?? 0;
+      final amount = (double.tryParse(b['finalAmount']?.toString() ?? b['final_amount']?.toString() ?? '0') ?? 0) / 100;
       return sum + amount;
     });
   }
@@ -56,7 +56,7 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> {
       try {
         final date = DateTime.parse(b['created_at']?.toString() ?? '');
         if (date.year == now.year && date.month == now.month) {
-          return sum + (double.tryParse(b['total_amount']?.toString() ?? '0') ?? 0);
+          return sum + (double.tryParse(b['finalAmount']?.toString() ?? b['final_amount']?.toString() ?? '0') ?? 0) / 100;
         }
       } catch (_) {}
       return sum;
@@ -139,12 +139,12 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> {
   }
 
   Widget _transactionItem(dynamic b) {
-    final amount = b['total_amount']?.toString() ?? '0';
-    final service = b['service_name'] ?? 'Service';
-    final customer = b['customer_name'] ?? 'Customer';
+    final amount = ((double.tryParse(b['finalAmount']?.toString() ?? b['final_amount']?.toString() ?? '0') ?? 0) / 100).round().toString();
+    final service = b['serviceName'] ?? b['service_name'] ?? 'Service';
+    final customer = b['customerName'] ?? b['customer_name'] ?? 'Customer';
     String dateStr = '';
     try {
-      final date = DateTime.parse(b['created_at']?.toString() ?? '');
+      final date = DateTime.parse(b['createdAt']?.toString() ?? b['created_at']?.toString() ?? '');
       dateStr = DateFormat('dd MMM yyyy').format(date);
     } catch (_) {}
 

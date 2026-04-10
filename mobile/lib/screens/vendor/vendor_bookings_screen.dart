@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vendorcenter/config/theme.dart';
 import 'package:vendorcenter/services/api_service.dart';
 import 'package:vendorcenter/widgets/status_badge.dart';
@@ -111,166 +112,167 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> with Single
     final serviceAddress = booking['serviceAddress'];
     final servicePincode = booking['servicePincode'] ?? booking['service_pincode'];
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    serviceName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                StatusBadge(status: status),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.person_outline, size: 16, color: AppColors.textSecondary),
-                const SizedBox(width: 4),
-                Text(customerName, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-              ],
-            ),
-            if (serviceAddress != null && serviceAddress is Map) ...[
-              const SizedBox(height: 4),
+    return GestureDetector(
+      onTap: () => context.push('/booking/${booking['id']}'),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textSecondary),
-                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      [
-                        if (serviceAddress['label'] != null) serviceAddress['label'],
-                        if (serviceAddress['landmark'] != null) serviceAddress['landmark'],
-                        if (serviceAddress['fullAddress'] != null) serviceAddress['fullAddress'],
-                        if (serviceAddress['pincode'] != null) serviceAddress['pincode'],
-                      ].where((s) => s != null && s.toString().isNotEmpty).join(', '),
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                      maxLines: 2,
+                      serviceName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  StatusBadge(status: status),
                 ],
               ),
-            ] else if (servicePincode != null) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textSecondary),
+                  const Icon(Icons.person_outline, size: 16, color: AppColors.textSecondary),
                   const SizedBox(width: 4),
-                  Text('Pincode: $servicePincode', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  Text(customerName, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                 ],
               ),
-            ],
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                const SizedBox(width: 4),
-                Text(formattedDate, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-              ],
-            ),
-            if (finalAmount != null) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.currency_rupee, size: 16, color: AppColors.textSecondary),
-                  const SizedBox(width: 4),
-                  Text('₹${(num.tryParse(finalAmount.toString()) ?? 0) / 100}',
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ],
-
-            // ── Action buttons based on status ──
-            if (status == 'pending') ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _showRejectDialog('${booking['id']}'),
-                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-                      child: const Text('Reject'),
+              if (serviceAddress != null && serviceAddress is Map) ...[
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        [
+                          if (serviceAddress['label'] != null) serviceAddress['label'],
+                          if (serviceAddress['landmark'] != null) serviceAddress['landmark'],
+                          if (serviceAddress['fullAddress'] != null) serviceAddress['fullAddress'],
+                          if (serviceAddress['pincode'] != null) serviceAddress['pincode'],
+                        ].where((s) => s != null && s.toString().isNotEmpty).join(', '),
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _updateStatus('${booking['id']}', 'confirmed'),
-                      child: const Text('Accept'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            if (status == 'confirmed') ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _updateStatus('${booking['id']}', 'in_progress'),
-                  child: const Text('Start Work'),
+                  ],
                 ),
+              ] else if (servicePincode != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_outlined, size: 16, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text('Pincode: $servicePincode', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                  const SizedBox(width: 4),
+                  Text(formattedDate, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                ],
               ),
-            ],
-            if (status == 'in_progress') ...[
-              const SizedBox(height: 12),
-              if (paymentStatus == 'success') ...[
-                // Payment done → vendor enters OTP from customer
+              if (finalAmount != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.currency_rupee, size: 16, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      '₹${(num.tryParse(finalAmount.toString()) ?? 0) / 100}',
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ],
+
+              if (status == 'pending') ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _showRejectDialog('${booking['id']}'),
+                        style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
+                        child: const Text('Reject'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _updateStatus('${booking['id']}', 'confirmed'),
+                        child: const Text('Accept'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (status == 'confirmed') ...[
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _showOtpDialog('${booking['id']}'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-                    child: const Text('Enter Completion OTP'),
-                  ),
-                ),
-              ] else if (completionRequested) ...[
-                // Payment requested, waiting for customer
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
-                      SizedBox(width: 8),
-                      Text('Waiting for Customer Payment', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 13)),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                // Work in progress → set amount and request payment
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showSetAmountDialog('${booking['id']}', finalAmount),
-                    icon: const Icon(Icons.payment, size: 18),
-                    label: const Text('Set Amount & Request Payment'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                    onPressed: () => _updateStatus('${booking['id']}', 'in_progress'),
+                    child: const Text('Start Work'),
                   ),
                 ),
               ],
+              if (status == 'in_progress') ...[
+                const SizedBox(height: 12),
+                if (paymentStatus == 'success') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _showOtpDialog('${booking['id']}'),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                      child: const Text('Enter Completion OTP'),
+                    ),
+                  ),
+                ] else if (completionRequested) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
+                        SizedBox(width: 8),
+                        Text('Waiting for Customer Payment', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showSetAmountDialog('${booking['id']}', finalAmount),
+                      icon: const Icon(Icons.payment, size: 18),
+                      label: const Text('Set Amount & Request Payment'),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

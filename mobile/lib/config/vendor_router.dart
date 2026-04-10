@@ -5,6 +5,7 @@ import 'package:vendorcenter/screens/vendor/vendor_register_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_shell_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_dashboard_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_bookings_screen.dart';
+import 'package:vendorcenter/screens/vendor/vendor_booking_detail_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_services_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_profile_screen.dart';
 import 'package:vendorcenter/screens/vendor/vendor_earnings_screen.dart';
@@ -85,6 +86,10 @@ GoRouter createVendorRouter(AuthService auth) {
       GoRoute(
         path: '/availability',
         builder: (_, __) => const VendorAvailabilityScreen(),
+      ),
+      GoRoute(
+        path: '/booking/:id',
+        builder: (_, state) => VendorBookingDetailScreen(bookingId: state.pathParameters['id']!),
       ),
     ],
   );

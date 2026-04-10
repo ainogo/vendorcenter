@@ -77,10 +77,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     final status = (b['status'] ?? 'pending').toString().toLowerCase();
     final dateStr = b['scheduledDate']?.toString() ?? b['preferred_date']?.toString() ?? b['scheduled_date']?.toString() ?? '';
     final timeStr = b['scheduledTime']?.toString() ?? b['preferred_time']?.toString() ?? b['scheduled_time']?.toString() ?? '';
-    final totalAmount = b['finalAmount']?.toString() ?? b['total_amount']?.toString() ?? '0';
-    final rawFinal = b['finalAmount'] ?? b['final_amount'];
-    final finalAmount = rawFinal != null ? '${(num.tryParse(rawFinal.toString()) ?? 0) / 100}' : null;
-    final displayAmount = finalAmount ?? totalAmount;
+    final rawAmount = b['finalAmount'] ?? b['final_amount'] ?? b['total_amount'] ?? 0;
+    final displayAmount = '${((num.tryParse(rawAmount.toString()) ?? 0) / 100).round()}';
     final vendorName = b['vendorName'] ?? b['vendor_business_name'] ?? b['vendor_name'] ?? 'Vendor';
     final serviceName = b['serviceName'] ?? b['service_name'] ?? 'Service';
     final notes = b['notes']?.toString() ?? '';
@@ -131,8 +129,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             _detailRow('Service', serviceName),
             _detailRow('Vendor', vendorName),
             _detailRow('Amount', '₹$displayAmount'),
-            if (finalAmount != null && totalAmount != finalAmount)
-              _detailRow('Original', '₹$totalAmount'),
           ]),
           const SizedBox(height: 12),
 

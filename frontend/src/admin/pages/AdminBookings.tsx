@@ -177,7 +177,7 @@ const AdminBookings = () => {
                             {b.status.replace("_", " ")}
                           </Badge>
                         </td>
-                        <td className="p-3">{b.final_amount != null ? `₹${b.final_amount}` : "—"}</td>
+                        <td className="p-3">{b.final_amount != null ? `₹${(b.final_amount / 100).toFixed(0)}` : "—"}</td>
                         <td className="p-3 text-muted-foreground">
                           {b.scheduled_date ? (
                             <span className="flex items-center gap-1">

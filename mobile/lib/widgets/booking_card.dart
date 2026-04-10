@@ -13,7 +13,8 @@ class BookingCard extends StatelessWidget {
     final status = (booking['status'] ?? 'pending').toString();
     final vendorName = booking['vendorName'] ?? booking['vendor_business_name'] ?? booking['vendor_name'] ?? 'Vendor';
     final serviceName = booking['serviceName'] ?? booking['service_name'] ?? 'Service';
-    final amount = (booking['finalAmount'] ?? booking['total_amount'] ?? 0).toString();
+    final rawAmount = (booking['finalAmount'] ?? booking['total_amount'] ?? 0);
+    final amount = ((num.tryParse(rawAmount.toString()) ?? 0) / 100).round();
     final date = (booking['scheduledDate'] ?? booking['preferred_date'] ?? '').toString();
     final time = (booking['scheduledTime'] ?? booking['preferred_time'] ?? '').toString();
     final isDark = AppColors.isDark(context);
