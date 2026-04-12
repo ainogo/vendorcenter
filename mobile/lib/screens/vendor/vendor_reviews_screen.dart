@@ -43,7 +43,7 @@ class _VendorReviewsScreenState extends State<VendorReviewsScreen> {
   Map<int, int> get _ratingDistribution {
     final dist = <int, int>{5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
     for (final r in _reviews) {
-      final rating = (r['rating'] ?? 0) as int;
+      final rating = (num.tryParse(r['rating'].toString()) ?? 0).toInt();
       if (dist.containsKey(rating)) {
         dist[rating] = dist[rating]! + 1;
       }
@@ -201,12 +201,12 @@ class _VendorReviewsScreenState extends State<VendorReviewsScreen> {
   }
 
   Widget _reviewItem(dynamic r) {
-    final name = r['customer_name']?.toString() ?? 'Customer';
+    final name = r['customerName']?.toString() ?? r['customer_name']?.toString() ?? 'Customer';
     final rating = (r['rating'] ?? 0).toDouble();
-    final comment = r['comment']?.toString() ?? '';
+    final comment = r['reviewText']?.toString() ?? r['comment']?.toString() ?? r['review_text']?.toString() ?? '';
     String dateStr = '';
     try {
-      final date = DateTime.parse(r['created_at']?.toString() ?? '');
+      final date = DateTime.parse((r['createdAt'] ?? r['created_at'])?.toString() ?? '');
       dateStr = DateFormat('dd MMM yyyy').format(date);
     } catch (_) {}
 

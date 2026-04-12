@@ -71,9 +71,11 @@ class _VendorBookingDetailScreenState extends State<VendorBookingDetailScreen> {
     final createdAt = b['createdAt']?.toString() ?? b['created_at']?.toString() ?? '';
     final workStartedAt = b['workStartedAt']?.toString() ?? b['work_started_at']?.toString() ?? '';
     final servicePincode = b['servicePincode'] ?? b['service_pincode'];
-    final addressLabel = b['serviceAddressLabel'] ?? b['serviceAddress']?['label'];
-    final addressFull = b['serviceAddress'] is Map ? b['serviceAddress']['fullAddress'] : b['serviceAddress'];
-    final addressLandmark = b['serviceAddressLandmark'] ?? b['serviceAddress']?['landmark'];
+    final sAddr = b['serviceAddress'];
+    final addrMap = sAddr is Map ? sAddr : null;
+    final addressLabel = b['serviceAddressLabel'] ?? addrMap?['label'];
+    final addressFull = addrMap != null ? addrMap['fullAddress'] : (sAddr is String ? sAddr : null);
+    final addressLandmark = b['serviceAddressLandmark'] ?? addrMap?['landmark'];
 
     String formattedDate = dateStr;
     try { if (dateStr.isNotEmpty) formattedDate = DateFormat('dd MMM yyyy').format(DateTime.parse(dateStr)); } catch (_) {}

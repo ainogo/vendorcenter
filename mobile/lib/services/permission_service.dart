@@ -2,17 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionService {
-  static Future<void> requestStartupPermissions(BuildContext context) async {
-    // Request notification permission (Android 13+)
-    final notifStatus = await Permission.notification.status;
-    if (notifStatus.isDenied) {
-      await Permission.notification.request();
-    }
+  static bool _requesting = false;
 
-    // Request location permission for nearby vendor search
-    final locStatus = await Permission.locationWhenInUse.status;
-    if (locStatus.isDenied) {
-      await Permission.locationWhenInUse.request();
+  static Future<void> requestStartupPermissions(BuildContext context) async {
+    if (_requesting) return;
+    _requesting = true;
+    try {
+      // Request notification permission (Android 13+)
+      final notifStatus = await Permission.notification.status;
+      if (notifStatus.isDenied) {
+        await Permission.notification.request();
+      }
+
+      // Request location permission for nearby vendor search
+      final locStatus = await Permission.locationWhenInUse.status;
+      if (locStatus.isDenied) {
+        await Permission.locationWhenInUse.request();
+      }
+    } finally {
+      _requesting = false;
     }
   }
 

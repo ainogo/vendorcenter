@@ -99,16 +99,15 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> with Single
   }
 
   Widget _bookingCard(Map<String, dynamic> booking) {
-    final date = booking['booking_date'] ?? booking['scheduled_date'] ?? booking['date'] ?? '';
-    final formattedDate = date.isNotEmpty
-      ? DateFormat('MMM d, y').format(DateTime.parse(date))
-      : 'N/A';
+    final date = (booking['scheduledDate'] ?? booking['scheduled_date'] ?? booking['booking_date'] ?? booking['date'] ?? '').toString();
+    String formattedDate = 'N/A';
+    try { if (date.isNotEmpty) formattedDate = DateFormat('MMM d, y').format(DateTime.parse(date)); } catch (_) {}
     final status = booking['status'] ?? 'pending';
-    final customerName = booking['customer_name'] ?? booking['customerName'] ?? 'Customer';
-    final serviceName = booking['service_name'] ?? booking['serviceName'] ?? 'Service';
-    final paymentStatus = (booking['payment_status'] ?? '').toString().toLowerCase();
-    final finalAmount = booking['final_amount'] ?? booking['finalAmount'];
-    final completionRequested = booking['completion_requested_at'] != null;
+    final customerName = booking['customerName'] ?? booking['customer_name'] ?? 'Customer';
+    final serviceName = booking['serviceName'] ?? booking['service_name'] ?? 'Service';
+    final paymentStatus = (booking['paymentStatus'] ?? booking['payment_status'] ?? '').toString().toLowerCase();
+    final finalAmount = booking['finalAmount'] ?? booking['final_amount'];
+    final completionRequested = (booking['completionRequestedAt'] ?? booking['completion_requested_at']) != null;
     final serviceAddress = booking['serviceAddress'];
     final servicePincode = booking['servicePincode'] ?? booking['service_pincode'];
 

@@ -60,8 +60,12 @@ export async function getReviewedBookingIds(customerId: string): Promise<string[
 export async function listRecentPublicReviews(limit = 6, vendorId?: string) {
   const params: (number | string)[] = [limit];
   let vendorFilter = '';
+  let textFilter = 'WHERE r.review_text IS NOT NULL AND length(trim(r.review_text)) > 0';
   if (vendorId) {
+    // When fetching for a specific vendor, include rating-only reviews too
     vendorFilter = ' AND r.vendor_id = $2';
+    textFilter = 'WHERE r.vendor_id = $2';
+    vendorFilter = '';
     params.push(vendorId);
   }
 
@@ -83,8 +87,7 @@ export async function listRecentPublicReviews(limit = 6, vendorId?: string) {
      FROM reviews r
      LEFT JOIN users u ON u.id::text = r.customer_id
      LEFT JOIN bookings b ON b.id = r.booking_id
-     WHERE r.review_text IS NOT NULL
-       AND length(trim(r.review_text)) > 0${vendorFilter}
+     ${textFilter}${vendorFilter}
      ORDER BY r.created_at DESC
      LIMIT $1`,
     params
