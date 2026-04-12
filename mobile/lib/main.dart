@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, FlutterError, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:vendorcenter/services/api_service.dart';
 import 'package:vendorcenter/app.dart';
 import 'package:vendorcenter/firebase_options.dart';
 import 'package:vendorcenter/services/auth_service.dart';
@@ -46,18 +51,27 @@ void main() async {
     androidProvider: AndroidProvider.playIntegrity,
   );
 
+  // Firebase Crashlytics — disable in debug, enable in release
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+
+  // Firebase Analytics
+  final analytics = FirebaseAnalytics.instance;
+  await analytics.setAnalyticsCollectionEnabled(!kDebugMode);
+  await analytics.logAppOpen();
+
   final prefs = await SharedPreferences.getInstance();
   final seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
 
   // Initialize push notifications
   await NotificationService().init();
 
-  // Global error handler — catches framework errors
+  // Report install/update to backend (non-blocking)
+  _reportInstall(prefs);
+
+  // Global error handler — forward to Crashlytics
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    if (!kDebugMode) {
-      debugPrint('[crash] ${details.exceptionAsString()}');
-    }
+    FirebaseCrashlytics.instance.recordFlutterFatalError(details);
   };
 
   // Catch async errors not handled by Flutter framework
@@ -75,10 +89,31 @@ void main() async {
     ),
   );
   }, (error, stack) {
-    if (!kDebugMode) {
-      debugPrint('[zone-error] $error');
-    }
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
   });
+}
+
+/// Reports app install/update to backend analytics (fire-and-forget)
+void _reportInstall(SharedPreferences prefs) async {
+  try {
+    // Generate or reuse a persistent device ID
+    var deviceId = prefs.getString('vc_device_id');
+    if (deviceId == null) {
+      deviceId = DateTime.now().microsecondsSinceEpoch.toRadixString(36) +
+          UniqueKey().toString();
+      await prefs.setString('vc_device_id', deviceId);
+    }
+    final info = await PackageInfo.fromPlatform();
+    await ApiService().reportInstall(
+      deviceId: deviceId,
+      appVersion: info.version,
+      flavor: 'customer',
+      deviceModel: Platform.localHostname,
+      osVersion: Platform.operatingSystemVersion,
+    );
+  } catch (_) {
+    // Non-critical — silently ignore
+  }
 }
 
 class _AppEntry extends StatefulWidget {

@@ -137,6 +137,8 @@ export const adminApi = {
 
   getAnalytics: () => request<any>("/analytics/admin"),
 
+  getInstallAnalytics: () => request<any>("/analytics/installs"),
+
   getActivityLogs: () => request<any[]>("/activity"),
 
   deleteUser: (userId: string) =>

@@ -286,3 +286,17 @@ CREATE TABLE IF NOT EXISTS vendor_blocked_dates (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(vendor_id, blocked_date)
 );
+
+-- ═══ App Install Tracking ═══
+CREATE TABLE IF NOT EXISTS app_installs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  device_id TEXT NOT NULL,
+  platform TEXT NOT NULL CHECK (platform IN ('android', 'ios', 'web')),
+  app_version TEXT NOT NULL,
+  flavor TEXT NOT NULL CHECK (flavor IN ('customer', 'vendor')),
+  device_model TEXT,
+  os_version TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(device_id, flavor)
+);

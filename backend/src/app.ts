@@ -195,12 +195,12 @@ app.get("/api/version", (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: {
-      currentVersion: "1.0.1",
-      minVersion: "1.0.0",
-      forceUpdate: false,
-      changelog: "Bug fixes, location search, vendor notifications, performance improvements",
-      customerApk: "https://vendorcenter.in/downloads/vendorcenter-customer.apk",
-      vendorApk: "https://vendorcenter.in/downloads/vendorcenter-vendor.apk",
+      currentVersion: process.env.APP_CURRENT_VERSION || "1.1.0",
+      minVersion: process.env.APP_MIN_VERSION || "1.0.0",
+      forceUpdate: process.env.APP_FORCE_UPDATE === "true",
+      changelog: process.env.APP_CHANGELOG || "Crash reporting, analytics, performance improvements",
+      customerApk: process.env.CUSTOMER_APK_URL || "https://github.com/ainogo/vendorcenter/releases/latest/download/vendorcenter-customer.apk",
+      vendorApk: process.env.VENDOR_APK_URL || "https://github.com/ainogo/vendorcenter/releases/latest/download/vendorcenter-vendor.apk",
     },
   });
 });

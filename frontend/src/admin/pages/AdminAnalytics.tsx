@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Shield, LogOut, ArrowLeft, TrendingUp, Users, Store,
-  MapPin, IndianRupee, Calendar, BarChart3
+  MapPin, IndianRupee, Calendar, BarChart3, Smartphone, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,14 @@ interface AnalyticsData {
   vendorGrowth: { month: string; count: number }[];
 }
 
+interface InstallData {
+  totalInstalls: number;
+  customerInstalls: number;
+  vendorInstalls: number;
+  dailyInstalls: { day: string; count: number }[];
+  recentInstalls: { device_id: string; platform: string; app_version: string; flavor: string; device_model: string; created_at: string }[];
+}
+
 const statusColors: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800",
   confirmed: "bg-blue-100 text-blue-800",
@@ -35,6 +43,7 @@ const AdminAnalytics = () => {
   const { user, logout, loading, hasPermission } = useAdminAuth();
   const navigate = useNavigate();
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [installs, setInstalls] = useState<InstallData | null>(null);
   const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
@@ -44,8 +53,10 @@ const AdminAnalytics = () => {
   useEffect(() => {
     if (user) {
       setFetching(true);
-      adminApi.getAnalytics()
-        .then(res => { if (res.data) setData(res.data); })
+      Promise.all([
+        adminApi.getAnalytics().then(res => { if (res.data) setData(res.data); }),
+        adminApi.getInstallAnalytics().then(res => { if (res.data) setInstalls(res.data); }),
+      ])
         .catch(() => {})
         .finally(() => setFetching(false));
     }
@@ -274,6 +285,52 @@ const AdminAnalytics = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* App Install Tracking */}
+            {installs && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2"><Smartphone className="w-5 h-5" /> App Installs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { title: "Total Installs", value: installs.totalInstalls, icon: Download, color: "text-violet-600", bg: "bg-violet-50" },
+                    { title: "Customer App", value: installs.customerInstalls, icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
+                    { title: "Vendor App", value: installs.vendorInstalls, icon: Store, color: "text-orange-500", bg: "bg-orange-50" },
+                  ].map(s => (
+                    <Card key={s.title}>
+                      <CardContent className="pt-5 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg ${s.bg} flex items-center justify-center`}>
+                            <s.icon className={`w-5 h-5 ${s.color}`} />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">{s.title}</p>
+                            <p className="text-xl font-bold">{s.value}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                {installs.dailyInstalls.length > 0 && (
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Daily Installs (last 30 days)</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="flex items-end gap-1 h-32">
+                        {installs.dailyInstalls.map(d => {
+                          const max = Math.max(...installs.dailyInstalls.map(i => i.count), 1);
+                          return (
+                            <div key={d.day} className="flex-1 flex flex-col items-center gap-0.5" title={`${d.day}: ${d.count}`}>
+                              <span className="text-[9px] font-semibold tabular-nums">{d.count}</span>
+                              <div className="w-full bg-violet-400 rounded-t min-h-[2px]" style={{ height: `${(d.count / max) * 100}px` }} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

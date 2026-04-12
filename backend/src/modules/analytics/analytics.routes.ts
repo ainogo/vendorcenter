@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { requireRole } from "../../middleware/auth.js";
 import { AuthRequest } from "../../middleware/auth.js";
 import { getBookingStats, getVendorBookingStats } from "../bookings/bookings.repository.js";
@@ -134,6 +134,74 @@ analyticsRouter.get("/admin", requireRole(["admin"]), async (_req, res, next) =>
         })),
         customerGrowth: customerGrowthR.rows,
         vendorGrowth: vendorGrowthR.rows,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Install Tracking ────────────────────────────
+
+// POST /analytics/install — public, logs app install/update
+analyticsRouter.post("/install", async (req: Request, res: Response, next) => {
+  try {
+    const { deviceId, platform, appVersion, flavor, deviceModel, osVersion } = req.body;
+    if (!deviceId || !platform || !appVersion || !flavor) {
+      res.status(400).json({ success: false, error: "Missing required fields" });
+      return;
+    }
+    if (!["android", "ios", "web"].includes(platform)) {
+      res.status(400).json({ success: false, error: "Invalid platform" });
+      return;
+    }
+    if (!["customer", "vendor"].includes(flavor)) {
+      res.status(400).json({ success: false, error: "Invalid flavor" });
+      return;
+    }
+    await pool.query(
+      `INSERT INTO app_installs (device_id, platform, app_version, flavor, device_model, os_version)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (device_id, flavor) DO UPDATE SET
+         app_version = EXCLUDED.app_version,
+         device_model = EXCLUDED.device_model,
+         os_version = EXCLUDED.os_version,
+         updated_at = NOW()`,
+      [deviceId, platform, appVersion, flavor, deviceModel || null, osVersion || null]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /analytics/installs — admin, returns install counts and list
+analyticsRouter.get("/installs", requireRole(["admin"]), async (_req, res, next) => {
+  try {
+    const [countR, listR, dailyR] = await Promise.all([
+      pool.query<{ flavor: string; count: number }>(
+        `SELECT flavor, COUNT(*)::int AS count FROM app_installs GROUP BY flavor`
+      ),
+      pool.query(
+        `SELECT device_id, platform, app_version, flavor, device_model, os_version, created_at, updated_at
+         FROM app_installs ORDER BY created_at DESC LIMIT 100`
+      ),
+      pool.query<{ day: string; count: number }>(
+        `SELECT TO_CHAR(created_at, 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
+         FROM app_installs WHERE created_at >= NOW() - INTERVAL '30 days'
+         GROUP BY day ORDER BY day`
+      ),
+    ]);
+    const countMap: Record<string, number> = {};
+    for (const row of countR.rows) countMap[row.flavor] = row.count;
+    res.json({
+      success: true,
+      data: {
+        totalInstalls: (countMap.customer || 0) + (countMap.vendor || 0),
+        customerInstalls: countMap.customer || 0,
+        vendorInstalls: countMap.vendor || 0,
+        dailyInstalls: dailyR.rows,
+        recentInstalls: listR.rows,
       },
     });
   } catch (err) {

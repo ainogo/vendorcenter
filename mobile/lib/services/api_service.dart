@@ -515,6 +515,28 @@ class ApiService {
     return res.data['data'] ?? [];
   }
 
+  // ─── Install Tracking ─────────────────────────
+  Future<void> reportInstall({
+    required String deviceId,
+    required String appVersion,
+    required String flavor,
+    String? deviceModel,
+    String? osVersion,
+  }) async {
+    try {
+      await _dio.post('/analytics/install', data: {
+        'deviceId': deviceId,
+        'platform': 'android',
+        'appVersion': appVersion,
+        'flavor': flavor,
+        'deviceModel': deviceModel,
+        'osVersion': osVersion,
+      });
+    } catch (_) {
+      // Silent fail — install tracking is non-critical
+    }
+  }
+
   // ─── File Upload ───────────────────────────────
   Future<String> uploadFile(String filePath) async {
     final fileName = filePath.split(RegExp(r'[/\\]')).last;
