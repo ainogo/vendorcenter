@@ -22,7 +22,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final List<_ChatMessage> _messages = [];
   List<String> _suggestions = [];
   String? _conversationId;
-  String? _lastProvider;
   bool _sending = false;
   double? _lat;
   double? _lng;
@@ -114,7 +113,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
       final provider = data['provider']?.toString();
       final navigateTo = data['navigateTo']?.toString();
       final followUp = data['followUp']?.toString();
-      _lastProvider = provider;
 
       if (mounted) {
         setState(() {

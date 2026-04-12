@@ -40,13 +40,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
     try {
       final profile = await _api.getProfile();
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _profile = profile;
         _avatarUrl = profile['profilePictureUrl'] as String?;
         _loading = false;
       });
+      }
     } catch (e) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) { setState(() => _loading = false); }
     }
   }
 

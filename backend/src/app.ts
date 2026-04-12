@@ -1,4 +1,5 @@
 import cors from "cors";
+import compression from "compression";
 import express, { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -40,6 +41,8 @@ const allowedCorsOrigins = env.corsOrigins
 // Railway / Vercel / Cloudflare proxy
 app.set("trust proxy", 1);
 
+// Gzip compression for all responses (reduces payload ~60-80%)
+app.use(compression());
 
 // Security headers
 app.use(
@@ -186,15 +189,18 @@ app.get("/health/firebase", async (_req: Request, res: Response) => {
   }
 });
 
-// App version check — mobile clients poll this to detect force-update
+// App version check — mobile clients poll this to detect updates
+// Self-hosted distribution: APKs served from our domain, not Play Store
 app.get("/api/version", (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: {
-      currentVersion: "1.0.0",
+      currentVersion: "1.0.1",
       minVersion: "1.0.0",
       forceUpdate: false,
-      updateUrl: "https://play.google.com/store/apps/details?id=com.vendorcenter.customer",
+      changelog: "Bug fixes, location search, vendor notifications, performance improvements",
+      customerApk: "https://vendorcenter.in/downloads/vendorcenter-customer.apk",
+      vendorApk: "https://vendorcenter.in/downloads/vendorcenter-vendor.apk",
     },
   });
 });

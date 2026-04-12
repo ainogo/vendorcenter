@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:vendorcenter/config/theme.dart';
 import 'package:vendorcenter/services/api_service.dart';
 import 'package:vendorcenter/services/auth_service.dart';
+import 'package:vendorcenter/services/update_service.dart';
 import 'package:shimmer/shimmer.dart';
 
 class VendorDashboardScreen extends StatefulWidget {
@@ -24,6 +25,10 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
   void initState() {
     super.initState();
     _loadDashboard();
+    // Check for app updates (self-hosted APK distribution)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) UpdateService().checkForUpdate(context, isVendor: true);
+    });
   }
 
   Future<void> _loadDashboard() async {

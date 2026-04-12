@@ -152,7 +152,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
         }
         return;
       }
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
       if (mounted) {
         setState(() {
           _lat = pos.latitude;

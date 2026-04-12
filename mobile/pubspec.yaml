@@ -46,6 +46,8 @@ dependencies:
   latlong2: ^0.9.1
   # URL launcher
   url_launcher: ^6.3.1
+  # App info for version checks
+  package_info_plus: ^8.0.0
   # Share
   share_plus: ^10.1.4
   flutter_local_notifications: ^21.0.0

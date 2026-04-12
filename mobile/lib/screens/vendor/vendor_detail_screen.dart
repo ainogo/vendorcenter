@@ -457,7 +457,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
     return name.isNotEmpty ? name[0].toUpperCase() : 'V';
   }
 
-  IconData _categoryIcon(String category) {
+  // Used in category chip display
+  IconData _categoryIcon(String category) { // ignore: unused_element
     final lower = category.toLowerCase();
     if (lower.contains('appliance') || lower.contains('repair') || lower.contains('mechanic')) return Icons.home_repair_service_rounded;
     if (lower.contains('clean')) return Icons.cleaning_services_rounded;
@@ -555,10 +556,15 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> with SingleTick
       final dt = DateTime.tryParse(createdAt.toString());
       if (dt != null) {
         final diff = DateTime.now().difference(dt).inDays;
-        if (diff == 0) timeAgo = 'Today';
-        else if (diff == 1) timeAgo = 'Yesterday';
-        else if (diff < 30) timeAgo = '$diff days ago';
-        else timeAgo = '${diff ~/ 30} months ago';
+        if (diff == 0) {
+          timeAgo = 'Today';
+        } else if (diff == 1) {
+          timeAgo = 'Yesterday';
+        } else if (diff < 30) {
+          timeAgo = '$diff days ago';
+        } else {
+          timeAgo = '${diff ~/ 30} months ago';
+        }
       }
     }
 

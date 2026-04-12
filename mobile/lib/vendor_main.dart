@@ -12,6 +12,7 @@ import 'package:vendorcenter/services/auth_service.dart';
 import 'package:vendorcenter/services/theme_service.dart';
 import 'package:vendorcenter/services/favorites_service.dart';
 import 'package:vendorcenter/services/localization_service.dart';
+import 'package:vendorcenter/services/notification_service.dart';
 import 'package:vendorcenter/screens/splash_screen.dart';
 
 void main() async {
@@ -42,6 +43,9 @@ void main() async {
   );
 
   final prefs = await SharedPreferences.getInstance();
+
+  // Initialize push notifications (required for vendor to receive booking alerts)
+  await NotificationService().init();
 
   // Global error handler — catches framework errors
   FlutterError.onError = (details) {

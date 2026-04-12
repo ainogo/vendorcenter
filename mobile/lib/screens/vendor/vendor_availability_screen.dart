@@ -271,7 +271,8 @@ class _VendorAvailabilityScreenState extends State<VendorAvailabilityScreen> {
         children: [
           Switch.adaptive(
             value: d.enabled,
-            activeColor: AppColors.primary,
+            activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+            activeThumbColor: AppColors.primary,
             onChanged: (v) => setState(() => d.enabled = v),
           ),
           const SizedBox(width: 8),
@@ -383,8 +384,11 @@ class _DaySchedule {
 
   _DaySchedule({
     required this.dayOfWeek,
+    // ignore: unused_element_parameter
     this.enabled = false,
+    // ignore: unused_element_parameter
     this.startTime = const TimeOfDay(hour: 9, minute: 0),
+    // ignore: unused_element_parameter
     this.endTime = const TimeOfDay(hour: 18, minute: 0),
   });
 }

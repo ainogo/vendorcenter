@@ -7,6 +7,7 @@ class ApiService {
   factory ApiService() => _instance;
 
   late final Dio _dio;
+  Dio get dio => _dio;
   final _storage = const FlutterSecureStorage();
 
   static const _accessKey = 'vc_access_token';
@@ -44,8 +45,6 @@ class ApiService {
       },
     ));
   }
-
-  Dio get dio => _dio;
 
   // ─── Token management ──────────────────────────
   Future<void> saveTokens(String access, String refresh) async {

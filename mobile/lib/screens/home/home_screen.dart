@@ -14,6 +14,7 @@ import 'package:vendorcenter/services/permission_service.dart';
 import 'package:vendorcenter/widgets/category_card.dart';
 import 'package:vendorcenter/widgets/vendor_card.dart';
 import 'package:vendorcenter/widgets/location_picker_sheet.dart';
+import 'package:vendorcenter/services/update_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -56,6 +57,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // Request permissions after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) PermissionService.requestStartupPermissions(context);
+      // Check for app updates (self-hosted APK distribution)
+      if (mounted) UpdateService().checkForUpdate(context);
     });
   }
 
