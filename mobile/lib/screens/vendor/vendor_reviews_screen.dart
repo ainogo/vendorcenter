@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vendorcenter/config/theme.dart';
 import 'package:vendorcenter/services/api_service.dart';
-import 'package:vendorcenter/services/auth_service.dart';
 
 class VendorReviewsScreen extends StatefulWidget {
   const VendorReviewsScreen({super.key});
@@ -28,8 +26,12 @@ class _VendorReviewsScreenState extends State<VendorReviewsScreen> {
   Future<void> _loadReviews() async {
     setState(() => _loading = true);
     try {
-      final auth = context.read<AuthService>();
-      _reviews = await _api.getPublicReviews(auth.userId, 100);
+      // Use vendor profile's vendorId (= users.id) — auth.userId can be empty
+      final profile = await _api.getVendorProfile();
+      final vendorId = profile['vendorId']?.toString() ?? '';
+      if (vendorId.isNotEmpty) {
+        _reviews = await _api.getPublicReviews(vendorId, 100);
+      }
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }

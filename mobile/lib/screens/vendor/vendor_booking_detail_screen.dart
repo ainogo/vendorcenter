@@ -484,9 +484,11 @@ class _VendorBookingDetailScreenState extends State<VendorBookingDetailScreen> {
 
   void _showOtpDialog(String bookingId) {
     final otpCtrl = TextEditingController();
+    bool resending = false;
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
         title: const Text('Complete Booking'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -498,6 +500,32 @@ class _VendorBookingDetailScreenState extends State<VendorBookingDetailScreen> {
               keyboardType: TextInputType.number,
               maxLength: 6,
               decoration: const InputDecoration(labelText: 'Customer OTP', hintText: '6-digit OTP'),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: resending ? null : () async {
+                setDialogState(() => resending = true);
+                try {
+                  await _api.resendCompletionOtp(bookingId);
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(content: Text('New OTP sent to customer'), backgroundColor: AppColors.success),
+                    );
+                  }
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Resend failed: $e'), backgroundColor: AppColors.error),
+                    );
+                  }
+                } finally {
+                  if (ctx.mounted) setDialogState(() => resending = false);
+                }
+              },
+              icon: resending
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.refresh, size: 18),
+              label: Text(resending ? 'Sending...' : 'Resend OTP'),
             ),
           ],
         ),
@@ -520,6 +548,7 @@ class _VendorBookingDetailScreenState extends State<VendorBookingDetailScreen> {
             child: const Text('Complete'),
           ),
         ],
+      ),
       ),
     );
   }

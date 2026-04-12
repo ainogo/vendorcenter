@@ -119,9 +119,13 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
             SnackBar(content: Text('Found: $area'), backgroundColor: AppColors.success),
           );
         } else {
-          setState(() => _pincodeArea = null);
+          // India Post API didn't return offices — accept the pincode anyway
+          setState(() {
+            _pincodeArea = null;
+            _zoneCtrl.text = pin;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pincode not found'), backgroundColor: AppColors.error),
+            const SnackBar(content: Text('Pincode accepted (details unavailable from India Post)')),
           );
         }
       }

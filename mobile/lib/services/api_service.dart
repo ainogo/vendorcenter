@@ -263,6 +263,11 @@ class ApiService {
     return res.data;
   }
 
+  Future<Map<String, dynamic>> resendCompletionOtp(String bookingId) async {
+    final res = await _dio.post('/bookings/$bookingId/resend-completion-otp');
+    return res.data;
+  }
+
   Future<Map<String, dynamic>> rejectBooking(String bookingId, String reason) async {
     final res = await _dio.post('/bookings/$bookingId/reject', data: {'reason': reason});
     return res.data;
@@ -329,9 +334,9 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getVendorReviewStats() async {
-    // Get vendor ID from profile first
+    // Use vendorId (= users.id), NOT id (= vendor_profiles random UUID)
     final profile = await getVendorProfile();
-    final vendorId = profile['id'] ?? '';
+    final vendorId = profile['vendorId'] ?? profile['id'] ?? '';
     if (vendorId.toString().isEmpty) return {'totalReviews': 0, 'averageRating': '0'};
     final res = await _dio.get('/reviews/vendor/$vendorId/rating');
     return res.data['data'] ?? {};

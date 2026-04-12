@@ -24,6 +24,7 @@ import Cookies from "./pages/Cookies";
 import Payment from "./pages/Payment";
 import CustomerAddresses from "./pages/CustomerAddresses";
 import NotFound from "./pages/NotFound";
+import Download from "./pages/Download";
 import AiAssistantChat from "./components/AiAssistantChat";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ function AnimatedRoutes() {
           <Route path="/terms" element={<><SEO title="Terms of Service" path="/terms" /><Terms /></>} />
           <Route path="/cookies" element={<><SEO title="Cookie Policy" path="/cookies" /><Cookies /></>} />
           <Route path="/pay/:bookingId" element={<><SEO title="Payment" noindex /><Payment /></>} />
+          <Route path="/download" element={<><SEO title="Download VendorCenter App" description="Download the VendorCenter mobile app for Android — available for customers and vendors." path="/download" /><Download /></>} />
           <Route path="*" element={<><SEO title="Page Not Found" noindex /><NotFound /></>} />
         </Routes>
       </motion.div>

@@ -600,3 +600,56 @@ bookingsRouter.post("/:bookingId/verify-completion", requireRole(["vendor"]), as
 
   res.json({ success: true, data: updated });
 });
+
+// ── Vendor requests resend of completion OTP ──
+bookingsRouter.post("/:bookingId/resend-completion-otp", requireRole(["vendor"]), async (req: AuthRequest, res) => {
+  const booking = await getBookingById(req.params.bookingId);
+  if (!booking) {
+    res.status(404).json({ success: false, error: "Booking not found" });
+    return;
+  }
+  if (booking.vendorId !== req.actor!.id) {
+    res.status(403).json({ success: false, error: "Not your booking" });
+    return;
+  }
+  if (booking.status !== "in_progress") {
+    res.status(400).json({ success: false, error: "Booking is not in progress" });
+    return;
+  }
+  if (booking.paymentStatus !== "success") {
+    res.status(400).json({ success: false, error: "Payment not yet completed by customer" });
+    return;
+  }
+
+  // Generate new OTP and email to customer
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const otpHash = crypto.createHash("sha256").update(code).digest("hex");
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await setCompletionOtp(booking.id, otpHash, expiresAt);
+
+  const customer = await findUserById(booking.customerId);
+  const vendorProfile = await getVendorProfile(booking.vendorId);
+  const amountStr = booking.finalAmount ? (booking.finalAmount / 100).toFixed(2) : undefined;
+
+  if (customer?.email) {
+    await sendCompletionOtpEmail({
+      recipientEmail: customer.email,
+      code,
+      serviceName: booking.serviceName,
+      vendorName: vendorProfile?.businessName || undefined,
+      amount: amountStr,
+      paymentLink: undefined,
+    }).catch((err) => console.error("[booking] failed to send resend OTP email", err));
+  }
+
+  trackActivity({
+    actorId: req.actor!.id,
+    role: "vendor",
+    action: "booking.completion_otp_resent",
+    entity: "booking",
+    metadata: { bookingId: booking.id },
+  });
+
+  res.json({ success: true, data: { otpSent: true, message: "New OTP sent to customer" } });
+});
