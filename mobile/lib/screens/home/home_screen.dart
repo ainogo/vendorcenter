@@ -128,8 +128,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final results = await Future.wait(futures);
       if (mounted) {
         final vendors = hasLoc ? (results[1] as List) : <dynamic>[];
+        // When location is not set, zero out vendor counts in categories
+        final cats = results[0] as List;
+        if (!hasLoc) {
+          for (var cat in cats) {
+            if (cat is Map) cat['vendor_count'] = 0;
+          }
+        }
         setState(() {
-          _categories = results[0] as List;
+          _categories = cats;
           _vendors = vendors;
           _stats = (hasLoc ? results[2] : results[1]) as Map<String, dynamic>;
           _loading = false;

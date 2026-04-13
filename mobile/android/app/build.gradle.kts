@@ -29,6 +29,22 @@ android {
         versionName = flutter.versionName
     }
 
+    // Load signing config from key.properties (local + CI)
+    val keyPropsFile = rootProject.file("key.properties")
+    val useReleaseKey = keyPropsFile.exists()
+
+    signingConfigs {
+        if (useReleaseKey) {
+            val keyProps = java.util.Properties().apply { load(keyPropsFile.inputStream()) }
+            create("release") {
+                keyAlias = keyProps["keyAlias"] as String
+                keyPassword = keyProps["keyPassword"] as String
+                storeFile = file(keyProps["storeFile"] as String)
+                storePassword = keyProps["storePassword"] as String
+            }
+        }
+    }
+
     // Two product flavors: customer and vendor
     flavorDimensions += "app"
     productFlavors {
@@ -46,8 +62,10 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (useReleaseKey)
+                signingConfigs.getByName("release")
+            else
+                signingConfigs.getByName("debug")
         }
     }
 }

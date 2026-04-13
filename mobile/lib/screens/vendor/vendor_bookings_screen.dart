@@ -240,6 +240,16 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> with Single
                       child: const Text('Enter Completion OTP'),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _resendCompletionOtp('${booking['id']}'),
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Resend OTP to Customer'),
+                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.success),
+                    ),
+                  ),
                 ] else if (completionRequested) ...[
                   Container(
                     width: double.infinity,
@@ -256,6 +266,16 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> with Single
                         SizedBox(width: 8),
                         Text('Waiting for Customer Payment', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 13)),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _resendPaymentRequest('${booking['id']}'),
+                      icon: const Icon(Icons.send_rounded, size: 16),
+                      label: const Text('Resend Payment Request'),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
                     ),
                   ),
                 ] else ...[
@@ -376,6 +396,40 @@ class _VendorBookingsScreenState extends State<VendorBookingsScreen> with Single
         ],
       ),
     );
+  }
+
+  Future<void> _resendCompletionOtp(String bookingId) async {
+    try {
+      await _api.resendCompletionOtp(bookingId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Completion OTP resent to customer'), backgroundColor: AppColors.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _resendPaymentRequest(String bookingId) async {
+    try {
+      await _api.requestPayment(bookingId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment request resent to customer'), backgroundColor: AppColors.success),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   Future<void> _updateStatus(String id, String status) async {

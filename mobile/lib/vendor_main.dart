@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,9 +42,8 @@ void main() async {
     );
   }
 
-  // App Check — DISABLED for sideloaded APKs.
-  // Play Integrity requires Play Store install; blocking App Check prevents
-  // phone auth reCAPTCHA fallback. Re-enable when published to Play Store.
+  // App Check disabled — sideloaded APKs cannot pass Play Integrity.
+  // Re-enable ONLY after publishing to Google Play Store:
   // await FirebaseAppCheck.instance.activate(
   //   androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
   // );

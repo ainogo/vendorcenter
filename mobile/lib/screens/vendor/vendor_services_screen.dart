@@ -137,21 +137,16 @@ class _VendorServicesScreenState extends State<VendorServicesScreen> {
         builder: (ctx, setSheetState) {
           final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
           final bottomPadding = MediaQuery.of(ctx).padding.bottom;
-          return Padding(
+          return Container(
           padding: EdgeInsets.only(bottom: bottomInset),
-          child: Container(
           decoration: BoxDecoration(
             color: AppColors.surfaceOf(ctx),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-            // Scrollable form content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                child: Column(
+          child: SingleChildScrollView(
+            child: Padding(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, 24 + bottomPadding + 80),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -260,16 +255,10 @@ class _VendorServicesScreenState extends State<VendorServicesScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
-            ),
-              ),
-            ),
+                const SizedBox(height: 24),
 
-                // Action buttons — pinned at bottom, always visible
-                Padding(
-                  padding: EdgeInsets.fromLTRB(24, 12, 24, 16 + bottomPadding),
-                  child: Row(
+                // Action buttons
+                Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
@@ -334,11 +323,11 @@ class _VendorServicesScreenState extends State<VendorServicesScreen> {
                     ),
                   ],
                 ),
-                ),
               ],
             ),
           ),
-          );
+          ),
+        );
         },
       ),
     );
