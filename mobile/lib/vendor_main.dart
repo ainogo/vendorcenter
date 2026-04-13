@@ -42,9 +42,10 @@ void main() async {
     );
   }
 
-  // Activate App Check — Play Integrity suppresses reCAPTCHA redirect
+  // Activate App Check — use debug provider for sideloaded/debug builds,
+  // Play Integrity for Play Store releases
   await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.playIntegrity,
+    androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
   );
 
   // Firebase Crashlytics — disable in debug, enable in release

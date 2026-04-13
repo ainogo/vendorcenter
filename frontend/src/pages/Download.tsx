@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { Download as DownloadIcon, Smartphone, Shield, RefreshCw } from "lucide-react";
+import { Download as DownloadIcon, Smartphone, Shield, RefreshCw, Monitor } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
@@ -14,6 +14,7 @@ interface VersionInfo {
 
 const DownloadPage = () => {
   const [version, setVersion] = useState<VersionInfo | null>(null);
+  const isMobile = useMemo(() => /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent), []);
 
   useEffect(() => {
     fetch("/api/version").then((r) => r.json()).then((res) => {
@@ -49,6 +50,20 @@ const DownloadPage = () => {
       <section className="py-16 md:py-24 bg-background">
         <div className="container max-w-4xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8">
+            {/* Desktop Notice */}
+            {!isMobile && (
+              <motion.div
+                variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="md:col-span-2 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-6 text-center"
+              >
+                <Monitor className="w-10 h-10 text-primary mx-auto mb-3" />
+                <h3 className="text-lg font-semibold mb-2">Open this page on your Android phone</h3>
+                <p className="text-muted-foreground text-sm mb-3">
+                  APK files can only be installed on Android devices. Visit <strong>vendorcenter.in/download</strong> on your phone to download directly.
+                </p>
+              </motion.div>
+            )}
             {/* Customer App */}
             <motion.div
               variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}

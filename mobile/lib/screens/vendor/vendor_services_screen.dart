@@ -134,14 +134,18 @@ class _VendorServicesScreenState extends State<VendorServicesScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Container(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        builder: (ctx, setSheetState) {
+          final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+          final bottomPadding = MediaQuery.of(ctx).padding.bottom;
+          return Container(
+          padding: EdgeInsets.only(bottom: bottomInset),
           decoration: BoxDecoration(
             color: AppColors.surfaceOf(ctx),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: SingleChildScrollView(
+            child: Padding(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, 24 + bottomPadding + 80),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,7 +326,9 @@ class _VendorServicesScreenState extends State<VendorServicesScreen> {
               ],
             ),
           ),
-        ),
+          ),
+        );
+        },
       ),
     );
   }
