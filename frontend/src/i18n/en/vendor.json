@@ -180,6 +180,8 @@
     "invalidOtp": "Invalid OTP",
     "noAccount": "Don't have a vendor account?",
     "registerAsVendor": "Register as Vendor",
+    "lookingForCustomerLogin": "Looking for customer login?",
+    "signInAsCustomer": "Sign in as Customer →",
     "sideTitle": "Vendor Portal",
     "sideDesc": "Manage your services, track bookings, and grow your business — all from one dashboard."
   },

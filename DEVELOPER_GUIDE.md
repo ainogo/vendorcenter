@@ -16,7 +16,7 @@ VendorCenter is a multi-portal local services marketplace:
 
 **Stack:** React 18 + Vite + Tailwind (frontend), Express + TypeScript + PostgreSQL (backend), Flutter 3.41 + Dart 3.11 (mobile), Firebase (auth/push/crashlytics/analytics).
 
-**Deployment:** Vercel (frontend), Railway (backend + PostgreSQL), Hugging Face Space (self-hosted LLM), GitHub Releases (APK distribution).
+**Deployment:** Vercel (frontend), Railway (backend), supabase(PostgreSQL+pgvector extension), Hugging Face Space (self-hosted LLM), GitHub Releases,Actions (APK distribution).
 
 ---
 
@@ -120,12 +120,12 @@ SELF_HOSTED_LLM_URL=
 ADMIN_PASSWORD=your-admin-password
 
 # Security
-SECURITY_STRICT_MODE=false
+SECURITY_STRICT_MODE=false/turn on true for production (blocks all non-secure defaults)
 
 # APK Distribution
 CUSTOMER_APK_URL=
 VENDOR_APK_URL=
-APP_CURRENT_VERSION=1.0.0
+APP_CURRENT_VERSION=1.1.2
 APP_FORCE_UPDATE=false
 ```
 
@@ -360,6 +360,7 @@ final name = data['customer_name'];
 | Vendor Web | Vercel | `vendorcenter.in/vendor` |
 | Admin Web | Vercel | `vendorcenter.in/company` |
 | Self-hosted LLM | HF Space | `timesprimeaj/vendorcenter-assistant` |
+| Apks | GitHub Releases/Actions | `vendorcenter.in/downloads` |
 
 ### Deployment Triggers
 
@@ -388,7 +389,7 @@ GEMINI_API_KEY=<key>
 GROQ_API_KEY=<key>
 CUSTOMER_APK_URL=<github-release-url>
 VENDOR_APK_URL=<github-release-url>
-APP_CURRENT_VERSION=1.0.0
+APP_CURRENT_VERSION=1.1.2
 ```
 
 ### Build Commands
