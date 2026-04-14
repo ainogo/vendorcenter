@@ -31,7 +31,11 @@ function saveRecentLocation(loc: LocationResult) {
     (r) => r.lat !== loc.lat || r.lng !== loc.lng
   );
   recent.unshift(loc);
-  localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+  } catch {
+    // Ignore storage failures.
+  }
 }
 
 interface LocationPickerProps {
@@ -102,7 +106,11 @@ const LocationPicker = ({ open, onClose }: LocationPickerProps) => {
   const handleGetCurrentLocation = () => {
     setGpsLoading(true);
     // Clear cache so it fetches fresh
-    localStorage.removeItem("vc_last_location");
+    try {
+      localStorage.removeItem("vc_last_location");
+    } catch {
+      // Ignore storage failures.
+    }
     refresh();
     setTimeout(() => {
       setGpsLoading(false);

@@ -184,11 +184,21 @@ const LanguageSwitcher = ({ compact = false }: LanguageSwitcherProps) => {
     (lang: SupportedLanguage) => {
       if (isGtActive() || gtWasActive.current) {
         // Persist choice to localStorage so i18n picks it up after reload
-        localStorage.setItem("vc_language", lang);
+        try {
+          localStorage.setItem("vc_language", lang);
+        } catch {
+          // Ignore storage failures and still attempt reload.
+        }
         nukeGoogleTranslate();
         // Reload for clean DOM — i18n reads vc_language on init
         window.location.reload();
         return;
+      }
+
+      try {
+        localStorage.setItem("vc_language", lang);
+      } catch {
+        // Ignore storage failures and still switch language in-memory.
       }
       i18n.changeLanguage(lang);
     },

@@ -12,6 +12,30 @@ function resolveApiBase() {
 }
 const API_BASE = resolveApiBase();
 
+function safeLocalGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalSet(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+function safeLocalRemove(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -22,7 +46,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const token = localStorage.getItem("adminAccessToken");
+  const token = safeLocalGet("adminAccessToken");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
@@ -33,10 +57,12 @@ async function request<T>(
   const body = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    if (res.status === 401 && localStorage.getItem("adminRefreshToken")) {
+    if (res.status === 401 && safeLocalGet("adminRefreshToken")) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
-        headers["Authorization"] = `Bearer ${localStorage.getItem("adminAccessToken")}`;
+        const nextToken = safeLocalGet("adminAccessToken");
+        if (nextToken) headers["Authorization"] = `Bearer ${nextToken}`;
+        else delete headers["Authorization"];
         const retry = await fetch(`${API_BASE}${path}`, { ...options, headers });
         return retry.json().catch(() => ({}));
       }
@@ -48,7 +74,7 @@ async function request<T>(
 }
 
 async function refreshAccessToken(): Promise<boolean> {
-  const refreshToken = localStorage.getItem("adminRefreshToken");
+  const refreshToken = safeLocalGet("adminRefreshToken");
   if (!refreshToken) return false;
   try {
     const res = await fetch(`${API_BASE}/auth/refresh`, {
@@ -57,14 +83,14 @@ async function refreshAccessToken(): Promise<boolean> {
       body: JSON.stringify({ refreshToken }),
     });
     if (!res.ok) {
-      localStorage.removeItem("adminAccessToken");
-      localStorage.removeItem("adminRefreshToken");
-      localStorage.removeItem("adminUser");
+      safeLocalRemove("adminAccessToken");
+      safeLocalRemove("adminRefreshToken");
+      safeLocalRemove("adminUser");
       return false;
     }
     const body = await res.json();
-    localStorage.setItem("adminAccessToken", body.data.accessToken);
-    localStorage.setItem("adminRefreshToken", body.data.refreshToken);
+    safeLocalSet("adminAccessToken", body.data.accessToken);
+    safeLocalSet("adminRefreshToken", body.data.refreshToken);
     return true;
   } catch {
     return false;
@@ -92,7 +118,7 @@ export const adminApi = {
     }),
 
   logout: () => {
-    const refreshToken = localStorage.getItem("adminRefreshToken");
+    const refreshToken = safeLocalGet("adminRefreshToken");
     return request("/auth/logout", {
       method: "POST",
       body: JSON.stringify({ refreshToken }),

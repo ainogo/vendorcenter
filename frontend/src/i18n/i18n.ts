@@ -35,10 +35,21 @@ export const supportedLanguages = {
 
 export type SupportedLanguage = keyof typeof supportedLanguages;
 
+const initialLanguage: SupportedLanguage | undefined = (() => {
+  try {
+    const stored = localStorage.getItem("vc_language");
+    return stored === "en" || stored === "mr" ? stored : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
+    lng: initialLanguage,
+    supportedLngs: Object.keys(supportedLanguages),
     resources: {
       en: {
         common: enCommon,
@@ -86,9 +97,9 @@ i18n
       escapeValue: false, // React already escapes
     },
     detection: {
-      order: ["localStorage", "navigator"],
+      order: ["navigator"],
       lookupLocalStorage: "vc_language",
-      caches: ["localStorage"],
+      caches: [],
     },
   });
 

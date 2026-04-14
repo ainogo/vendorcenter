@@ -83,6 +83,38 @@ function getAssistantFallbackMessage(lang: AssistantLanguage): string {
     : "I'm having a bit of trouble connecting right now. Please try again in a moment, or browse our services directly!";
 }
 
+function safeLocalGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSessionGet(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSessionSet(key: string, value: string) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+function safeSessionRemove(key: string) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 async function queryAssistant(
   message: string,
   lat?: number,
@@ -110,14 +142,15 @@ async function queryAssistant(
   const doFetch = async (): Promise<AssistantResponse> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20_000);
+    const token = safeLocalGet("customer_accessToken");
 
     try {
       const res = await fetch(`${API_BASE}/ai-assistant/query`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(localStorage.getItem("customer_accessToken")
-            ? { Authorization: `Bearer ${localStorage.getItem("customer_accessToken")}` }
+          ...(token
+            ? { Authorization: `Bearer ${token}` }
             : {}),
         },
         body: JSON.stringify(body),
@@ -173,7 +206,7 @@ async function clearConversation(conversationId: string): Promise<void> {
 async function getSuggestions(lang?: string): Promise<string[]> {
   const API_BASE = resolveApiBase();
   const headers: Record<string, string> = {};
-  const token = localStorage.getItem("customer_accessToken");
+  const token = safeLocalGet("customer_accessToken");
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const normalizedLang = normalizeAssistantLanguage(lang);
   const url = `${API_BASE}/ai-assistant/suggestions?lang=${normalizedLang}`;
@@ -537,7 +570,7 @@ function getChatScope(scope: string, lang: AssistantLanguage): string {
 }
 
 function getAuthScope(): string {
-  const token = localStorage.getItem("customer_accessToken");
+  const token = safeLocalGet("customer_accessToken");
   if (!token) return "guest";
 
   try {
@@ -555,7 +588,7 @@ function scopedStorageKey(baseKey: string, scope: string): string {
 
 function loadSavedMessages(scope: string): ChatMessage[] {
   try {
-    const raw = sessionStorage.getItem(scopedStorageKey(CHAT_STORAGE_KEY, scope));
+    const raw = safeSessionGet(scopedStorageKey(CHAT_STORAGE_KEY, scope));
     if (raw) {
       const parsed = JSON.parse(raw) as ChatMessage[];
       // Restore Date objects
@@ -577,7 +610,7 @@ export default function AiAssistantChat() {
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(
-    () => sessionStorage.getItem(scopedStorageKey(CHAT_CONV_KEY, getChatScope(initialAuthScope, assistantLanguage))) || undefined,
+    () => safeSessionGet(scopedStorageKey(CHAT_CONV_KEY, getChatScope(initialAuthScope, assistantLanguage))) || undefined,
   );
   const [isClosing, setIsClosing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -611,7 +644,7 @@ export default function AiAssistantChat() {
 
   useEffect(() => {
     const nextMessages = loadSavedMessages(chatScope);
-    const nextConversationId = sessionStorage.getItem(scopedStorageKey(CHAT_CONV_KEY, chatScope)) || undefined;
+    const nextConversationId = safeSessionGet(scopedStorageKey(CHAT_CONV_KEY, chatScope)) || undefined;
     setMessages(nextMessages);
     setConversationId(nextConversationId);
   }, [chatScope]);
@@ -637,13 +670,13 @@ export default function AiAssistantChat() {
 
   // Persist chat to sessionStorage
   useEffect(() => {
-    try { sessionStorage.setItem(scopedStorageKey(CHAT_STORAGE_KEY, chatScope), JSON.stringify(messages)); } catch { /* quota */ }
+    safeSessionSet(scopedStorageKey(CHAT_STORAGE_KEY, chatScope), JSON.stringify(messages));
   }, [messages, chatScope]);
 
   useEffect(() => {
     const key = scopedStorageKey(CHAT_CONV_KEY, chatScope);
-    if (conversationId) sessionStorage.setItem(key, conversationId);
-    else sessionStorage.removeItem(key);
+    if (conversationId) safeSessionSet(key, conversationId);
+    else safeSessionRemove(key);
   }, [conversationId, chatScope]);
 
   useEffect(() => {
@@ -685,8 +718,8 @@ export default function AiAssistantChat() {
     if (conversationId) clearConversation(conversationId);
     setConversationId(undefined);
     setMessages([{ ...WELCOME_MESSAGE, id: `welcome-${Date.now()}`, timestamp: new Date() }]);
-    sessionStorage.removeItem(scopedStorageKey(CHAT_STORAGE_KEY, chatScope));
-    sessionStorage.removeItem(scopedStorageKey(CHAT_CONV_KEY, chatScope));
+    safeSessionRemove(scopedStorageKey(CHAT_STORAGE_KEY, chatScope));
+    safeSessionRemove(scopedStorageKey(CHAT_CONV_KEY, chatScope));
   }, [conversationId, chatScope]);
 
   const send = useCallback(

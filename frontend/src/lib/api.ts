@@ -12,6 +12,30 @@ function resolveApiBase() {
 }
 const API_BASE = resolveApiBase();
 
+function safeLocalGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalSet(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage errors (private mode, quota, blocked storage).
+  }
+}
+
+function safeLocalRemove(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -22,7 +46,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const token = localStorage.getItem("customer_accessToken");
+  const token = safeLocalGet("customer_accessToken");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
@@ -34,10 +58,12 @@ async function request<T>(
 
   if (!res.ok) {
     // Try token refresh on 401
-    if (res.status === 401 && localStorage.getItem("customer_refreshToken")) {
+    if (res.status === 401 && safeLocalGet("customer_refreshToken")) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
-        headers["Authorization"] = `Bearer ${localStorage.getItem("customer_accessToken")}`;
+        const nextToken = safeLocalGet("customer_accessToken");
+        if (nextToken) headers["Authorization"] = `Bearer ${nextToken}`;
+        else delete headers["Authorization"];
         const retry = await fetch(`${API_BASE}${path}`, { ...options, headers });
         return retry.json().catch(() => ({}));
       }
@@ -56,7 +82,7 @@ export async function refreshAccessToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    const refreshToken = localStorage.getItem("customer_refreshToken");
+    const refreshToken = safeLocalGet("customer_refreshToken");
     if (!refreshToken) return false;
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
@@ -65,14 +91,14 @@ export async function refreshAccessToken(): Promise<boolean> {
         body: JSON.stringify({ refreshToken }),
       });
       if (!res.ok) {
-        localStorage.removeItem("customer_accessToken");
-        localStorage.removeItem("customer_refreshToken");
-        localStorage.removeItem("customer_user");
+        safeLocalRemove("customer_accessToken");
+        safeLocalRemove("customer_refreshToken");
+        safeLocalRemove("customer_user");
         return false;
       }
       const body = await res.json();
-      localStorage.setItem("customer_accessToken", body.data.accessToken);
-      localStorage.setItem("customer_refreshToken", body.data.refreshToken);
+      safeLocalSet("customer_accessToken", body.data.accessToken);
+      safeLocalSet("customer_refreshToken", body.data.refreshToken);
       return true;
     } catch {
       return false;
@@ -140,13 +166,13 @@ export const api = {
     }),
 
   logout: () => {
-    const refreshToken = localStorage.getItem("customer_refreshToken");
+    const refreshToken = safeLocalGet("customer_refreshToken");
     return request("/auth/logout", {
       method: "POST",
       body: JSON.stringify({ refreshToken }),
     }).finally(() => {
-      localStorage.removeItem("customer_accessToken");
-      localStorage.removeItem("customer_refreshToken");
+      safeLocalRemove("customer_accessToken");
+      safeLocalRemove("customer_refreshToken");
     });
   },
 
@@ -249,7 +275,7 @@ export const api = {
   getBookings: () => request<any[]>("/bookings"),
 
   downloadReceipt: async (bookingId: string) => {
-    const token = localStorage.getItem("customer_accessToken");
+    const token = safeLocalGet("customer_accessToken");
     const res = await fetch(`${API_BASE}/bookings/${bookingId}/receipt`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
@@ -268,7 +294,7 @@ export const api = {
 
   // File uploads
   uploadFile: async (file: File): Promise<{ url: string }> => {
-    const token = localStorage.getItem("customer_accessToken");
+    const token = safeLocalGet("customer_accessToken");
     const formData = new FormData();
     formData.append("file", file);
     const res = await fetch(`${API_BASE}/uploads/file`, {
@@ -282,7 +308,7 @@ export const api = {
   },
 
   uploadFiles: async (files: File[]): Promise<{ urls: string[] }> => {
-    const token = localStorage.getItem("customer_accessToken");
+    const token = safeLocalGet("customer_accessToken");
     const formData = new FormData();
     files.forEach(f => formData.append("files", f));
     const res = await fetch(`${API_BASE}/uploads/files`, {

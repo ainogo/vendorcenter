@@ -27,7 +27,11 @@ function getCachedLocation(maxAgeMs = CACHE_MAX_AGE_MS): UserLocation | null {
 }
 
 function cacheLocation(loc: UserLocation) {
-  localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify({ ...loc, ts: Date.now() }));
+  try {
+    localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify({ ...loc, ts: Date.now() }));
+  } catch {
+    // Ignore storage write failures (private mode, quota, blocked storage).
+  }
 }
 
 /**
@@ -113,7 +117,7 @@ export function getUserLocation(options?: { timeout?: number; maximumAge?: numbe
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
   const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
   const res = await fetch(url, {
-    headers: { "Accept-Language": "en", "User-Agent": "VendorCenter/1.0" },
+    headers: { "Accept-Language": "en" },
   });
   if (!res.ok) throw new Error("Geocoding failed");
   const data = await res.json();
@@ -126,7 +130,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
 export async function forwardGeocode(query: string): Promise<{ lat: number; lng: number; display: string }[]> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`;
   const res = await fetch(url, {
-    headers: { "Accept-Language": "en", "User-Agent": "VendorCenter/1.0" },
+    headers: { "Accept-Language": "en" },
   });
   if (!res.ok) throw new Error("Geocoding failed");
   const data = await res.json();
