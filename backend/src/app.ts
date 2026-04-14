@@ -158,15 +158,12 @@ app.get("/health/firebase", async (_req: Request, res: Response) => {
   const { env: envConfig } = await import("./config/env.js");
   const { isFirebaseConfigured } = await import("./services/firebaseService.js");
 
-  // Key diagnostics (safe: only PEM header, length — no secret material)
+  // Key diagnostics (safe: lengths and formatting flags only)
   const rawKey = process.env.FIREBASE_PRIVATE_KEY ?? "";
   const parsedKey = envConfig.firebasePrivateKey;
   const keyDiag = {
     rawLength: rawKey.length,
     parsedLength: parsedKey.length,
-    rawFirst35: rawKey.substring(0, 35),
-    parsedFirst35: parsedKey.substring(0, 35),
-    parsedLast30: parsedKey.substring(Math.max(0, parsedKey.length - 30)),
     hasLiteralBackslashN: rawKey.includes("\\n"),
     hasRealNewlines: parsedKey.includes("\n"),
     newlineCount: (parsedKey.match(/\n/g) || []).length,
