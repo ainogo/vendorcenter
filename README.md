@@ -202,15 +202,6 @@ Current deployment targets:
 - Role enforcement on all auth endpoints — cross-role login blocked
 - Secrets are expected in local or deployment environment files, not in git-tracked files
 
-## Documentation
-
-- Architecture: `docs/architecture.md`
-- AI notes: `docs/ai-features.md`
-- AI roadmap: `docs/AI_PLAN.md`
-- Project scope: `docs/PROJECT_SCOPE.md`
-- Project scope PDF: `docs/Project_Scope_VendorCenter.pdf`
-- Module docs: `docs/modules/`
-- Reports: `docs/reports/`
 
 ## Notes
 

@@ -48,3 +48,5 @@ app.*.map.json
 /android/app/src/customer/google-services.json
 /android/app/src/vendor/google-services.json
 /android/app/google-services.json
+
+README.md
