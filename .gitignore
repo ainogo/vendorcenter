@@ -30,6 +30,12 @@ credentials.local.md
 .github/agents/
 AGENTS.md
 docs/
+deploy/
+infra/
+docs/generate-pdfs.mjs
+docs/PRODUCTION_AUDIT_REPORT.md
+docs/PRODUCTION_AUDIT_REPORT.pdf
+
 
 # MCP / Playwright local config
 .mcp.json
@@ -47,9 +53,11 @@ model/training-data/.jsonl_b64*
 
 # Temp migration files
 backend/migrate-temp.ts
+backend/uploads/
+backend/README.md
 
 # Jupyter notebooks (large, local-only)
-model/notebooks/*.ipynb
+
 
 # Screenshots / debug artifacts (not for repo)
 *.png
@@ -65,6 +73,7 @@ amazon-nav.md
 # OS/Editor
 .DS_Store
 Thumbs.db
+.vscode/
 .vscode/*.log
 
 # Logs
@@ -74,7 +83,7 @@ logs/*.log
 
 # Uploads (user-generated files)
 uploads/
-backend/uploads/
+
 
 # Reference project (not part of deployment)
 vendor-connect-30-main/
