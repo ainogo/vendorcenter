@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Download as DownloadIcon, Smartphone, Shield, RefreshCw, Monitor } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import { useEffect, useState, useMemo, useCallback  } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0 } };
 
@@ -24,19 +24,8 @@ const DownloadPage = () => {
 
   const customerApk = version?.customerApk || "https://github.com/timesprimeaj1/vendorcenter/releases/latest/download/vendorcenter-customer.apk";
   const vendorApk = version?.vendorApk || "https://github.com/timesprimeaj1/vendorcenter/releases/latest/download/vendorcenter-vendor.apk";
-  const currentVersion = version?.currentVersion || "1.1.2";
-  const changelog = version?.changelog || "Phone auth fix, signing fix, resend payment/OTP, category location filter,booking service padding fix, and various bug fixes and performance improvements.";
-
-  const triggerDownload = useCallback((url: string) => {
-    // Trigger download without navigating away — avoids blank GitHub page on mobile
-    const a = document.createElement('a');
-    a.href = url;
-    a.setAttribute('download', '');
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }, []);
+  const currentVersion = version?.currentVersion || "1.1.5";
+  const changelog = version?.changelog || "Fixed notification tap redirect, proper app logo in notifications, extended login session to 30 days, and various bug fixes.";
 
   return (
     <Layout>
@@ -88,13 +77,15 @@ const DownloadPage = () => {
               <p className="text-muted-foreground mb-6">
                 Find trusted local service providers, book services, make payments, and track your bookings.
               </p>
-              <button
-                onClick={() => triggerDownload(customerApk)}
+              <a
+                href={customerApk}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors cursor-pointer"
               >
                 <DownloadIcon className="w-5 h-5" />
                 Download Customer APK
-              </button>
+              </a>
             </motion.div>
 
             {/* Vendor App */}
@@ -110,13 +101,15 @@ const DownloadPage = () => {
               <p className="text-muted-foreground mb-6">
                 Manage your services, accept bookings, track payments, and grow your business.
               </p>
-              <button
-                onClick={() => triggerDownload(vendorApk)}
+              <a
+                href={vendorApk}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition-colors cursor-pointer"
               >
                 <DownloadIcon className="w-5 h-5" />
                 Download Vendor APK
-              </button>
+              </a>
             </motion.div>
           </div>
 
