@@ -1,6 +1,6 @@
 # VendorCenter
 
-VendorCenter (vendorcenter.in) is a multi-portal local services marketplace with separate customer, vendor, and company/admin experiences — plus native Android apps for both customers and vendors.
+VendorCenter (https://www.vendorcenter.in) is a multi-portal local services marketplace with separate customer, vendor, and company/admin experiences — plus native Android apps for both customers and vendors.
 
 The platform combines a React frontend, an Express + PostgreSQL backend, Flutter mobile apps, and a hybrid retrieval-assisted AI assistant for service discovery, booking guidance, and FAQ support.
 
